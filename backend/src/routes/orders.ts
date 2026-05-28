@@ -142,7 +142,10 @@ ordRouter.get("/", async (req: OrdReq, res: OrdRes) => {
     const { status, date, limit = "50", offset = "0" } = req.query;
     const where: Record<string, unknown> = {};
     if (req.restaurantId) where.restaurantId = req.restaurantId;
-    if (status) where.status = status;
+    if (status) {
+      const statusStr = status as string;
+      where.status = statusStr.includes(",") ? { in: statusStr.split(",") } : statusStr;
+    }
     if (date) {
       const d = new Date(date as string);
       where.createdAt = {
