@@ -8,11 +8,12 @@ import MenuPage from "./MenuPage";
 import UsersPage from "./UsersPage";
 import ReportsPage from "./ReportsPage";
 import InventoryPage from "./InventoryPage";
+import TablesPage from "./TablesPage";
 import {
   LogOut, LayoutDashboard, DollarSign, ShoppingCart,
   TrendingUp, Clock, CreditCard, Banknote, ArrowRightLeft,
   RefreshCw, ChefHat, HandPlatter, Users, Package,
-  Settings, BarChart3, AlertCircle, CheckCircle,
+  Settings, BarChart3, AlertCircle, CheckCircle, MapPin,
 } from "lucide-react";
 
 interface AdminData {
@@ -28,6 +29,7 @@ const NAV_ITEMS = [
   { id: "inventory", label: "Inventario", icon: Package },
   { id: "reports", label: "Reportes", icon: BarChart3 },
   { id: "users", label: "Usuarios", icon: Users },
+  { id: "tables", label: "Mesas", icon: MapPin },
   { id: "settings", label: "Config.", icon: Settings },
 ];
 
@@ -230,6 +232,7 @@ export default function AdminDashboard() {
           {section === "users" && <UsersPage />}
           {section === "reports" && <ReportsPage />}
           {section === "inventory" && <InventoryPage />}
+          {section === "tables" && <TablesPage />}
           {section === "orders" && (
             <div className="flex h-64 items-center justify-center">
               <p className="text-text-muted">Historial de órdenes — próximamente</p>

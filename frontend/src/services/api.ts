@@ -212,8 +212,15 @@ export const cashRegister = {
 // ─── Settings ───────────────────────────────────────────────
 
 export const settings = {
-  tables: () => request<{ tables: import("../types").Table[] }>("/restaurant/tables"),
+  tables: () => request<{ data: import("../types").Table[] }>("/restaurant/tables"),
   restaurant: () => request<{ restaurant: import("../types").Restaurant }>("/restaurant/settings"),
+  addTable: (number: number, floor: string) =>
+    request<any>("/restaurant/tables", {
+      method: "POST",
+      body: JSON.stringify({ number, floor, capacity: 4 }),
+    }),
+  deleteTable: (id: string) =>
+    request<any>(`/restaurant/tables/${id}`, { method: "DELETE" }),
 };
 
 // ─── Reports ────────────────────────────────────────────────

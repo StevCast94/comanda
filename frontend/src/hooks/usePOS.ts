@@ -69,7 +69,7 @@ export function usePOS() {
           categories: catRes.categories,
           products: prodRes.products,
           combos: comboRes.combos,
-          tables: tableRes.tables,
+          tables: tableRes.data,
           cashRegister: crRes.register,
           settings: (restRes?.restaurant?.settings as RestaurantSettings) || defaultSettings,
           selectedCategory: catRes.categories[0]?.id || null,
