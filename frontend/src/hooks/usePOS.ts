@@ -71,7 +71,7 @@ export function usePOS() {
           combos: comboRes.combos,
           tables: tableRes.tables,
           cashRegister: crRes.register,
-          settings: (restRes.restaurant.settings as RestaurantSettings) || defaultSettings,
+          settings: (restRes?.restaurant?.settings as RestaurantSettings) || defaultSettings,
           selectedCategory: catRes.categories[0]?.id || null,
           loading: false,
         }));
