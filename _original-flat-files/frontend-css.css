@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+/* ─── Comanda Custom Theme ──────────────────────────────── */
+
+@theme {
+  --color-surface: #0f172a;
+  --color-surface-2: #1e293b;
+  --color-surface-3: #334155;
+  --color-border: #475569;
+  --color-text: #f1f5f9;
+  --color-text-muted: #94a3b8;
+  --color-accent: #10b981;
+  --color-accent-hover: #059669;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #3b82f6;
+}
+
+/* ─── Base ───────────────────────────────────────────────── */
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Scrollbar (dark) ───────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-3);
+  border-radius: 3px;
+}
+
+/* ─── Touch-friendly buttons ─────────────────────────────── */
+
+.btn {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 150ms ease;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-primary {
+  background-color: var(--color-accent);
+  color: white;
+}
+.btn-primary:hover {
+  background-color: var(--color-accent-hover);
+}
+.btn-primary:active {
+  transform: scale(0.97);
+}
+
+.btn-danger {
+  background-color: var(--color-danger);
+  color: white;
+}
+.btn-danger:hover {
+  opacity: 0.9;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-text-muted);
+}
+.btn-ghost:hover {
+  background-color: var(--color-surface-3);
+  color: var(--color-text);
+}
+
+/* ─── KDS large text ─────────────────────────────────────── */
+
+.kds-text {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+
+/* ─── Pulse animation for new orders ─────────────────────── */
+
+@keyframes pulse-border {
+  0%, 100% { border-color: var(--color-accent); }
+  50% { border-color: transparent; }
+}
+.pulse-new {
+  animation: pulse-border 1.5s ease-in-out 3;
+}
