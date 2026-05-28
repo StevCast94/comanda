@@ -106,7 +106,7 @@ export default function OrderPanel({
             {showTablePicker && (
               <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-lg border border-border bg-surface shadow-lg">
                 {/* Group by floor */}
-                {[...new Set(tables.map((t) => t.floor))].map((floor) => (
+                {[...new Set((tables || []).map(t => t.floor))].map((floor) => (
                   <div key={floor}>
                     <div className="sticky top-0 bg-surface-3 px-3 py-1 text-xs font-medium text-text-muted">{floor}</div>
                     <div className="grid grid-cols-4 gap-1 p-2">
