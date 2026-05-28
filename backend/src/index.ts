@@ -56,8 +56,8 @@ app.use(express.static(path.join(__dirname, "..", "public"), {
   index: false,
 }));
 
-// index.html — no cache
-app.get("*", (_req, res) => {
+// index.html — no cache (Express 5 compatible catch-all)
+app.get("/{*path}", (_req, res) => {
   res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   res.sendFile(path.join(__dirname, "..", "public", "index.html"));
 });
