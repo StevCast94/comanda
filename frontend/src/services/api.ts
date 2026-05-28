@@ -277,6 +277,20 @@ export const inventory = {
 export const superadmin = {
   restaurants: () => request<{ restaurants: unknown[] }>("/superadmin/restaurants"),
   metrics: () => request<Record<string, unknown>>("/superadmin/metrics"),
+  createRestaurant: (data: { name: string; slug: string; type: string; address?: string; phone?: string; adminName: string; adminEmail: string; adminPassword: string; plan: string }) =>
+    request<{ message: string; restaurant: any; admin: any }>("/superadmin/restaurants", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  suspendRestaurant: (id: string) =>
+    request<any>(`/superadmin/restaurants/${id}/suspend`, { method: "PATCH" }),
+  reactivateRestaurant: (id: string) =>
+    request<any>(`/superadmin/restaurants/${id}/reactivate`, { method: "PATCH" }),
+  updateSubscription: (subId: string, plan: string) =>
+    request<any>(`/superadmin/subscriptions/${subId}`, {
+      method: "PUT",
+      body: JSON.stringify({ plan }),
+    }),
 };
 
 export default { auth, register, categories, products, combos, orders, kitchen, waiter, cashRegister, settings, reports, superadmin };

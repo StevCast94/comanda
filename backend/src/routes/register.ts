@@ -8,6 +8,7 @@ const router = Router();
 const registerSchema = z.object({
   restaurantName: z.string().min(2, "Nombre del restaurante requerido"),
   slug: z.string().min(2).max(50).regex(/^[a-z0-9-]+$/, "Solo letras minúsculas, números y guiones"),
+  type: z.enum(["COMIDA_RAPIDA","CEVICHERIA","COCKTELERIA","BAR","PARRILLADA","RESTAURANTE","CAFETERIA","PIZZERIA","MARISQUERIA","OTRO"]).optional().default("RESTAURANTE"),
   address: z.string().optional(),
   phone: z.string().optional(),
   adminName: z.string().min(2, "Nombre del administrador requerido"),
@@ -43,6 +44,7 @@ router.post("/", async (req: Request, res: Response) => {
         data: {
           name: data.restaurantName,
           slug: data.slug,
+          type: (data as any).type || "RESTAURANTE",
           address: data.address,
           phone: data.phone,
           settings: { taxRate: 0.15, serviceRate: 0.10, defaultTip: 0 },

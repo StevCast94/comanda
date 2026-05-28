@@ -132,12 +132,26 @@ enum BillingCycle {
   ANNUAL
 }
 
+enum RestaurantType {
+  COMIDA_RAPIDA
+  CEVICHERIA
+  COCKTELERIA
+  BAR
+  PARRILLADA
+  RESTAURANTE
+  CAFETERIA
+  PIZZERIA
+  MARISQUERIA
+  OTRO
+}
+
 // ─── MODELS ─────────────────────────────────────────────────
 
 model Restaurant {
-  id        String   @id @default(cuid())
+  id        String         @id @default(cuid())
   name      String
-  slug      String   @unique
+  slug      String         @unique
+  type      RestaurantType @default(OTRO)
   logo      String?
   address   String?
   phone     String?

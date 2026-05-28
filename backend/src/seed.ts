@@ -35,6 +35,7 @@ async function main() {
     data: {
       name: "El Sabor Criollo",
       slug: "el-sabor-criollo",
+      type: "RESTAURANTE",
       address: "Av. Amazonas N23-45, Quito",
       phone: "+593 2 234 5678",
       timezone: "America/Guayaquil",
