@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/src/index.js",
-    "seed": "tsx src/seed.ts",
+    "start": "npx tsx src/index.ts",
+    "seed": "npx tsx src/seed.ts",
     "migrate": "npx prisma migrate dev",
     "studio": "npx prisma studio"
   },
@@ -22,10 +22,8 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "prisma": "^6.8.0",
+    "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "zod": "^3.24.0"
-  },
-  "devDependencies": {
-    "tsx": "^4.19.0"
   }
 }
