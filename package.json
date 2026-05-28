@@ -1,0 +1,12 @@
+{
+  "name": "comanda",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd backend && npm install && npx prisma generate && npx tsc",
+    "start": "cd backend && node dist/src/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
