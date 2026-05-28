@@ -49,6 +49,15 @@ router.post("/login", async (req: Request, res: Response) => {
       restaurantId: user.restaurantId,
     }, expiresIn);
 
+    // Include restaurant data so frontend has settings immediately
+    let restaurant = null;
+    if (user.restaurantId) {
+      restaurant = await prisma.restaurant.findUnique({
+        where: { id: user.restaurantId },
+        select: { id: true, name: true, slug: true, logo: true, settings: true, currency: true },
+      });
+    }
+
     res.json({
       token,
       user: {
@@ -59,6 +68,7 @@ router.post("/login", async (req: Request, res: Response) => {
         role: user.role,
         restaurantId: user.restaurantId,
         avatar: user.avatar,
+        restaurant,
       },
     });
   } catch (err) {
