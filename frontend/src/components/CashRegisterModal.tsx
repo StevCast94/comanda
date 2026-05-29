@@ -1,11 +1,11 @@
 import { useState } from "react";
 import type { CashRegister } from "../types";
-import { X, DollarSign, Loader2 } from "lucide-react";
+import { X, DollarSign, Loader2, CheckCircle, AlertTriangle } from "lucide-react";
 
 interface Props {
   mode: "open" | "close";
   register?: CashRegister | null;
-  onSubmit: (balance: number, notes?: string) => Promise<void>;
+  onSubmit: (balance: number, notes?: string) => Promise<any>;
   onClose: () => void;
 }
 
@@ -14,6 +14,18 @@ export default function CashRegisterModal({ mode, register, onSubmit, onClose }:
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<{ verification: { realSales: number; expectedBalance: number; closingBalance: number; discrepancy: number; closingDiscrepancy: number; breakdown: { cash: number; card: number; transfer: number } } } | null>(null);
+
+  async function handleSubmit() {
+    const val = parseFloat(balance);
+    if (isNaN(val) || val < 0) { setError("Ingresa un monto válido"); return; }
+    setLoading(true); setError(null);
+    try {
+      const res = await onSubmit(val, notes || undefined);
+      if (res?.verification) setResult(res);
+      else onClose();
+    } catch (err) { setError(err instanceof Error ? err.message : "Error"); } finally { setLoading(false); }
+  }
 
   async function handleSubmit() {
     const val = parseFloat(balance);
@@ -130,13 +142,36 @@ export default function CashRegisterModal({ mode, register, onSubmit, onClose }:
             <div className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">{error}</div>
           )}
 
-          <button
-            onClick={handleSubmit}
-            disabled={loading || !balance}
-            className="btn btn-primary w-full text-base disabled:opacity-50"
-          >
-            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : isClose ? "Cerrar caja" : "Abrir caja"}
-          </button>
+          {result ? (
+            <div className="space-y-2 rounded-lg border border-accent/20 bg-accent/5 p-3 text-sm">
+              <div className="flex items-center gap-2">
+                {result.verification.closingDiscrepancy !== 0
+                  ? <AlertTriangle className="h-5 w-5 text-warning" />
+                  : <CheckCircle className="h-5 w-5 text-accent" />}
+                <span className="font-bold text-text">
+                  {result.verification.closingDiscrepancy !== 0 ? "⚠️ Discrepancia" : "✅ Cierre verificado"}
+                </span>
+              </div>
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between text-text-muted"><span>Ventas reales (órdenes)</span><span className="text-accent">${result.verification.realSales.toFixed(2)}</span></div>
+                <div className="flex justify-between text-text-muted"><span>Efectivo</span><span>${result.verification.breakdown.cash.toFixed(2)}</span></div>
+                <div className="flex justify-between text-text-muted"><span>Tarjeta</span><span>${result.verification.breakdown.card.toFixed(2)}</span></div>
+                <div className="flex justify-between text-text-muted"><span>Transferencia</span><span>${result.verification.breakdown.transfer.toFixed(2)}</span></div>
+                <div className="flex justify-between font-bold text-text border-t border-border pt-1 mt-1"><span>Balance esperado</span><span>$${result.verification.expectedBalance.toFixed(2)}</span></div>
+                <div className="flex justify-between text-text-muted"><span>Balance declarado</span><span>$${result.verification.closingBalance.toFixed(2)}</span></div>
+                {result.verification.closingDiscrepancy !== 0 && (
+                  <div className="flex justify-between text-danger font-bold"><span>Diferencia</span><span>{result.verification.closingDiscrepancy > 0 ? "+" : ""}${result.verification.closingDiscrepancy.toFixed(2)}</span></div>
+                )}
+              </div>
+              <button onClick={onClose} className="btn btn-primary w-full mt-2">Cerrar</button>
+            </div>
+          ) : (
+            <button onClick={handleSubmit} disabled={loading || !balance}
+              className="btn btn-primary w-full text-base disabled:opacity-50"
+            >
+              {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : isClose ? "Cerrar caja" : "Abrir caja"}
+            </button>
+          )}
         </div>
       </div>
     </div>

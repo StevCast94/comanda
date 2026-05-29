@@ -393,8 +393,8 @@ export default function POSPage() {
           mode="close"
           register={pos.cashRegister}
           onSubmit={async (balance, notes) => {
-            await pos.closeCashRegister(balance, notes);
-            setShowCashModal(false);
+            const res = await pos.closeCashRegister(balance, notes);
+            return res;
           }}
           onClose={() => setShowCashModal(false)}
         />

@@ -231,6 +231,7 @@ export const cashRegister = {
       body: JSON.stringify({ closingBalance, notes }),
     }),
   current: () => request<{ register: import("../types").CashRegister | null }>("/cash-register/current"),
+  history: () => request<{ registers: import("../types").CashRegister[] }>("/cash-register/history"),
 };
 
 // ─── Settings ───────────────────────────────────────────────
