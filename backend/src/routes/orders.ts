@@ -191,6 +191,31 @@ ordRouter.get("/", async (req: OrdReq, res: OrdRes) => {
   }
 });
 
+// GET /api/orders/live — tracking en tiempo real para caja (DEBE ir antes de /:id)
+ordRouter.get("/live", ordAuthz("CASHIER", "ADMIN"), async (req: OrdReq, res: OrdRes) => {
+  try {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const orders = await ordPrisma.order.findMany({
+      where: {
+        restaurantId: req.restaurantId!,
+        createdAt: { gte: today },
+        status: { not: "CANCELLED" },
+      },
+      include: {
+        items: { include: { menuItem: { select: { name: true } }, combo: { select: { name: true } } } },
+        table: { select: { number: true, floor: true } },
+        cashier: { select: { name: true } },
+        waiter: { select: { name: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json({ orders });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error" });
+  }
+});
+
 // GET /api/orders/:id
 ordRouter.get("/:id", async (req: OrdReq, res: OrdRes) => {
   try {
@@ -229,31 +254,6 @@ ordRouter.patch("/:id/status", async (req: OrdReq, res: OrdRes) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Error actualizando estado" });
-  }
-});
-
-// GET /api/orders/live — tracking en tiempo real para caja
-ordRouter.get("/live", ordAuthz("CASHIER", "ADMIN"), async (req: OrdReq, res: OrdRes) => {
-  try {
-    const today = new Date(); today.setHours(0,0,0,0);
-    const orders = await ordPrisma.order.findMany({
-      where: {
-        restaurantId: req.restaurantId!,
-        createdAt: { gte: today },
-        status: { not: "CANCELLED" },
-      },
-      include: {
-        items: { include: { menuItem: { select: { name: true } }, combo: { select: { name: true } } } },
-        table: { select: { number: true, floor: true } },
-        cashier: { select: { name: true } },
-        waiter: { select: { name: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-    res.json({ orders });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Error" });
   }
 });
 
