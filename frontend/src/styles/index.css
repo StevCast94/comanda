@@ -1,19 +1,19 @@
 @import "tailwindcss";
 
-/* ─── Comanda Custom Theme ──────────────────────────────── */
+/* ─── Comanda Custom Theme — Red & White ─────────────────── */
 
 @theme {
-  --color-surface: #0f172a;
-  --color-surface-2: #1e293b;
-  --color-surface-3: #334155;
-  --color-border: #475569;
-  --color-text: #f1f5f9;
-  --color-text-muted: #94a3b8;
-  --color-accent: #10b981;
-  --color-accent-hover: #059669;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
-  --color-info: #3b82f6;
+  --color-surface: #ffffff;
+  --color-surface-2: #f8f9fa;
+  --color-surface-3: #e9ecef;
+  --color-border: #dee2e6;
+  --color-text: #212529;
+  --color-text-muted: #6c757d;
+  --color-accent: #dc2626;
+  --color-accent-hover: #b91c1c;
+  --color-warning: #f97316;
+  --color-danger: #dc2626;
+  --color-info: #f97316;
 }
 
 /* ─── Base ───────────────────────────────────────────────── */
@@ -27,7 +27,7 @@ html, body, #root {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ─── Scrollbar (dark) ───────────────────────────────────── */
+/* ─── Scrollbar (light) ──────────────────────────────────── */
 
 ::-webkit-scrollbar {
   width: 6px;
@@ -102,3 +102,9 @@ html, body, #root {
 .pulse-new {
   animation: pulse-border 1.5s ease-in-out 3;
 }
+
+/* ─── accent/10s, accent/20s, etc for red tones ──────────── */
+
+.bg-accent\/10 { background-color: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+.bg-accent\/20 { background-color: color-mix(in srgb, var(--color-accent) 20%, transparent); }
+.bg-accent\/5 { background-color: color-mix(in srgb, var(--color-accent) 5%, transparent); }
