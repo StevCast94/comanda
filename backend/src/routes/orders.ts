@@ -332,8 +332,8 @@ ordRouter.patch("/:id/confirm-payment", ordAuthz("CASHIER", "ADMIN"), async (req
   }
 });
 
-// PATCH /api/orders/:id/items — update items (CASHIER edits pending order)
-ordRouter.patch("/:id/items", ordAuthz("CASHIER", "ADMIN"), async (req: OrdReq, res: OrdRes) => {
+// PATCH /api/orders/:id/items — update items (CASHIER, WAITER, ADMIN edits pending order)
+ordRouter.patch("/:id/items", ordAuthz("CASHIER", "ADMIN", "WAITER"), async (req: OrdReq, res: OrdRes) => {
   try {
     const { items } = req.body;
     if (!items || !Array.isArray(items) || items.length === 0) {

@@ -4,9 +4,10 @@ import { usePolling } from "../../hooks/usePolling";
 import * as api from "../../services/api";
 import type { Order, CartItem, Table, MenuItem, Combo, RestaurantSettings, KitchenStation } from "../../types";
 import ProductCard from "../../components/ProductCard";
+import EditOrderModal from "../../components/EditOrderModal";
 import {
   LogOut, HandPlatter, RefreshCw, CheckCircle, Clock,
-  MapPin, Loader2, Wifi, WifiOff, Volume2, VolumeX,
+  MapPin, Loader2, Wifi, WifiOff, Volume2, VolumeX, Pencil,
   Search, X, ShoppingCart, Minus, Plus, Trash2, StickyNote,
   UtensilsCrossed, ChevronDown, User,
 } from "lucide-react";
@@ -31,6 +32,21 @@ export default function WaiterPage() {
     { interval: 5000 }
   );
   const readyOrders: Order[] = data?.orders || [];
+
+  // ─── My pending orders (for editing) ───────────────────────
+  const [myPending, setMyPending] = useState<Order[]>([]);
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+  useEffect(() => {
+    const fetch = async () => {
+      try {
+        const { orders } = await api.orders.list({ status: "PENDING", limit: 50 });
+        if (user) setMyPending((orders || []).filter((o: any) => o.waiterId === user.id || o.waiter?.id === user.id));
+      } catch {}
+    };
+    fetch();
+    const t = setInterval(fetch, 10000);
+    return () => clearInterval(t);
+  }, [user]);
 
   // ─── Take Order state ─────────────────────────────────────
   const [categories, setCategories] = useState<any[]>([]);
@@ -230,6 +246,38 @@ export default function WaiterPage() {
           <CheckCircle className="h-4 w-4" />
           Orden #{justDelivered} entregada
         </div>
+      )}
+
+      {/* Mis órdenes pendientes (barra plegable) */}
+      {myPending.length > 0 && (
+        <details className="border-b border-border bg-surface-2" open>
+          <summary className="flex items-center gap-2 px-4 py-2 cursor-pointer text-sm font-medium text-warning hover:text-warning/80">
+            <Clock className="h-4 w-4" />
+            Mis {myPending.length} orden{myPending.length !== 1 ? "es" : ""} en caja (pendiente de pago)
+          </summary>
+          <div className="flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-none">
+            {myPending.map(order => (
+              <div key={order.id} className="flex-shrink-0 w-60 rounded-xl border border-warning/20 bg-surface-2 p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-bold text-text">#{order.orderNumber}</span>
+                  {order.table && <span className="text-xs text-text-muted">M{order.table.number}</span>}
+                </div>
+                <div className="text-xs text-text-muted mb-2 space-y-0.5">
+                  {order.items.slice(0, 3).map((item: any) => (
+                    <p key={item.id} className="truncate">{item.quantity}x {item.menuItem?.name || item.combo?.name}</p>
+                  ))}
+                  {order.items.length > 3 && <p>+{order.items.length - 3} más</p>}
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-accent">${order.total.toFixed(2)}</span>
+                  <button onClick={() => setEditingOrder(order)} className="btn btn-ghost px-2 py-1 text-xs text-info border border-info/20">
+                    <Pencil className="h-3.5 w-3.5 inline mr-1" />Editar
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </details>
       )}
 
       {/* ─── TAB: ENTREGAR ──────────────────────────────────── */}
@@ -499,6 +547,16 @@ export default function WaiterPage() {
             </div>
           </div>
         </>
+      )}
+
+      {/* Edit Order Modal — for pending orders */}
+      {editingOrder && (
+        <EditOrderModal
+          order={editingOrder}
+          products={products}
+          onClose={() => setEditingOrder(null)}
+          onSaved={() => {}}
+        />
       )}
     </div>
   );
