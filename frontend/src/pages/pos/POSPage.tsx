@@ -7,9 +7,10 @@ import ComboModal from "../../components/ComboModal";
 import CashRegisterModal from "../../components/CashRegisterModal";
 import * as api from "../../services/api";
 import {
-  LogOut, Search, X, ShoppingCart, Loader2,
+  LogOut, Search, X, ShoppingCart, Loader2, Eye, EyeOff,
   DollarSign, AlertCircle, Banknote, CreditCard, ArrowRightLeft,
-  Clock, MapPin, User,
+  Clock, MapPin, User, ChevronDown, ChevronUp, RefreshCw,
+  CheckCircle, Flame, ChefHat, HandPlatter,
 } from "lucide-react";
 import type { Combo, Order } from "../../types";
 
@@ -22,6 +23,11 @@ export default function POSPage() {
   // Pending orders from waiters
   const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
   const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
+  const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+
+  // Live tracking: all non-cancelled orders today
+  const [liveOrders, setLiveOrders] = useState<Order[]>([]);
+  const [showLive, setShowLive] = useState(false);
 
   const fetchPending = useCallback(async () => {
     try {
@@ -30,7 +36,14 @@ export default function POSPage() {
     } catch { /* ignore */ }
   }, []);
 
-  useEffect(() => { fetchPending(); const t = setInterval(fetchPending, 10000); return () => clearInterval(t); }, [fetchPending]);
+  const fetchLive = useCallback(async () => {
+    try {
+      const { orders } = await api.orders.live();
+      setLiveOrders(orders || []);
+    } catch {}
+  }, []);
+
+  useEffect(() => { fetchPending(); fetchLive(); const t = setInterval(() => { fetchPending(); fetchLive(); }, 8000); return () => clearInterval(t); }, [fetchPending, fetchLive]);
 
   const confirmPayment = async (orderId: string, method: string) => {
     setPayingOrderId(orderId);
@@ -100,54 +113,115 @@ export default function POSPage() {
         <div className="border-b border-warning/30 bg-warning/5">
           <div className="flex items-center gap-2 px-4 py-2">
             <Clock className="h-4 w-4 text-warning" />
-            <span className="text-sm font-bold text-warning">{pendingOrders.length} pendiente{pendingOrders.length !== 1 ? "s" : ""} de cobro</span>
-            <span className="text-xs text-text-muted ml-auto">Tomadas por el mesero</span>
+            <span className="text-sm font-bold text-warning">
+              {pendingOrders.length} pendiente{pendingOrders.length !== 1 ? "s" : ""} de cobro
+            </span>
+            <span className="text-xs text-text-muted">Tomadas por el mesero — clic para expandir</span>
+            <button onClick={() => setShowLive(!showLive)} className="btn btn-ghost ml-auto px-2 py-1 text-xs text-text-muted">
+              <Eye className="h-3.5 w-3.5 mr-1 inline" />{showLive ? "Ocultar tracking" : "Ver tracking"}
+            </button>
           </div>
           <div className="flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-none">
-            {pendingOrders.map(order => (
-              <div key={order.id} className="flex-shrink-0 w-64 rounded-xl border border-warning/20 bg-surface-2 p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-bold text-text">#{order.orderNumber}</span>
-                  {order.table && (
-                    <span className="flex items-center gap-1 text-xs text-text-muted">
-                      <MapPin className="h-3 w-3" />M{order.table.number}
-                    </span>
+            {pendingOrders.map(order => {
+              const isExpanded = expandedOrder === order.id;
+              return (
+                <div key={order.id} className={`flex-shrink-0 rounded-xl border border-warning/20 bg-surface-2 p-3 transition-all ${isExpanded ? "w-80" : "w-64"}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-bold text-text">#{order.orderNumber}</span>
+                    {order.table && (
+                      <span className="flex items-center gap-1 text-xs text-text-muted">
+                        <MapPin className="h-3 w-3" />M{order.table.number}
+                      </span>
+                    )}
+                  </div>
+                  {order.customerName && (
+                    <p className="flex items-center gap-1 text-xs text-text-muted mb-1"><User className="h-3 w-3" />{order.customerName}</p>
                   )}
+                  {order.waiter && (
+                    <p className="text-xs text-text-muted mb-1">Mesero: {order.waiter.name}</p>
+                  )}
+                  <div className="text-xs text-text-muted mb-1 space-y-0.5">
+                    {order.items.slice(0, isExpanded ? 99 : 4).map(item => (
+                      <p key={item.id} className={`${isExpanded ? "" : "truncate"}`}>
+                        {item.quantity}x {item.menuItem?.name || (item as any).combo?.name}
+                        {isExpanded && item.notes && <span className="text-warning ml-1">📝 {item.notes}</span>}
+                        {isExpanded && item.modifiers && (item.modifiers as Array<{name:string}>).length > 0 && (
+                          <span className="text-accent ml-1">+{(item.modifiers as Array<{name:string}>).map(m => m.name).join(", ")}</span>
+                        )}
+                      </p>
+                    ))}
+                    {!isExpanded && order.items.length > 4 && (
+                      <button onClick={() => setExpandedOrder(order.id)} className="text-accent hover:underline">
+                        +{order.items.length - 4} más
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-bold text-accent">${order.total.toFixed(2)}</span>
+                    {isExpanded && (
+                      <button onClick={() => setExpandedOrder(null)} className="btn btn-ghost p-1 text-xs text-text-muted">
+                        <ChevronUp className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-3 gap-1">
+                    {[
+                      { label: "Efe", method: "CASH", icon: Banknote },
+                      { label: "Tarj", method: "CARD", icon: CreditCard },
+                      { label: "Trans", method: "TRANSFER", icon: ArrowRightLeft },
+                    ].map(({ label, method, icon: Icon }) => (
+                      <button
+                        key={method}
+                        onClick={() => confirmPayment(order.id, method)}
+                        disabled={payingOrderId === order.id}
+                        className="btn flex-col gap-0.5 py-1.5 text-[10px] bg-accent/10 text-accent hover:bg-accent/20 disabled:opacity-50"
+                      >
+                        {payingOrderId === order.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icon className="h-3.5 w-3.5" />}
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                {order.customerName && (
-                  <p className="flex items-center gap-1 text-xs text-text-muted mb-1"><User className="h-3 w-3" />{order.customerName}</p>
-                )}
-                {order.waiter && (
-                  <p className="text-xs text-text-muted mb-1">Mesero: {order.waiter.name}</p>
-                )}
-                <div className="text-xs text-text-muted mb-2 space-y-0.5">
-                  {order.items.slice(0, 4).map(item => (
-                    <p key={item.id} className="truncate">{item.quantity}x {item.menuItem?.name || (item as any).combo?.name}</p>
-                  ))}
-                  {order.items.length > 4 && <p className="text-text-muted">+{order.items.length - 4} más</p>}
-                </div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-bold text-accent">${order.total.toFixed(2)}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-1">
-                  {[
-                    { label: "Efe", method: "CASH", icon: Banknote },
-                    { label: "Tarj", method: "CARD", icon: CreditCard },
-                    { label: "Trans", method: "TRANSFER", icon: ArrowRightLeft },
-                  ].map(({ label, method, icon: Icon }) => (
-                    <button
-                      key={method}
-                      onClick={() => confirmPayment(order.id, method)}
-                      disabled={payingOrderId === order.id}
-                      className="btn flex-col gap-0.5 py-1.5 text-[10px] bg-accent/10 text-accent hover:bg-accent/20 disabled:opacity-50"
-                    >
-                      {payingOrderId === order.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icon className="h-3.5 w-3.5" />}
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Live Tracking panel */}
+      {showLive && (
+        <div className="border-b border-accent/30 bg-surface-2">
+          <div className="flex items-center gap-2 px-4 py-2">
+            <RefreshCw className="h-4 w-4 text-accent" />
+            <span className="text-sm font-bold text-accent">Live Tracking — Hoy</span>
+            <span className="text-xs text-text-muted ml-auto">{liveOrders.length} órdenes activas</span>
+          </div>
+          <div className="grid grid-cols-5 gap-1 px-4 pb-3 text-xs">
+            <div className="rounded-lg bg-yellow-500/10 p-2 text-center border border-yellow-500/20">
+              <Clock className="h-4 w-4 text-yellow-400 mx-auto mb-1" />
+              <p className="font-bold text-yellow-400">{liveOrders.filter(o => o.status === "PENDING").length}</p>
+              <p className="text-yellow-500/70">Pendiente pago</p>
+            </div>
+            <div className="rounded-lg bg-info/10 p-2 text-center border border-info/20">
+              <ChefHat className="h-4 w-4 text-info mx-auto mb-1" />
+              <p className="font-bold text-info">{liveOrders.filter(o => o.status === "PAID" || o.status === "PREPARING").length}</p>
+              <p className="text-info/70">En cocina</p>
+            </div>
+            <div className="rounded-lg bg-accent/10 p-2 text-center border border-accent/20">
+              <CheckCircle className="h-4 w-4 text-accent mx-auto mb-1" />
+              <p className="font-bold text-accent">{liveOrders.filter(o => o.status === "READY").length}</p>
+              <p className="text-accent/70">Listo</p>
+            </div>
+            <div className="rounded-lg bg-green-500/10 p-2 text-center border border-green-500/20">
+              <HandPlatter className="h-4 w-4 text-green-400 mx-auto mb-1" />
+              <p className="font-bold text-green-400">{liveOrders.filter(o => o.status === "DELIVERED").length}</p>
+              <p className="text-green-500/70">Entregado</p>
+            </div>
+            <div className="rounded-lg bg-surface p-2 text-center border border-border">
+              <DollarSign className="h-4 w-4 text-text-muted mx-auto mb-1" />
+              <p className="font-bold text-text">${liveOrders.filter(o => o.status !== "PENDING").reduce((s, o) => s + o.total, 0).toFixed(0)}</p>
+              <p className="text-text-muted">Total cobrado</p>
+            </div>
           </div>
         </div>
       )}

@@ -173,6 +173,8 @@ export const orders = {
       method: "PATCH",
       body: JSON.stringify({ paymentMethod }),
     }),
+
+  live: () => request<{ orders: import("../types").Order[] }>("/orders/live"),
 };
 
 // ─── Kitchen ────────────────────────────────────────────────
