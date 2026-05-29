@@ -1,12 +1,8 @@
 {
-  "$schema": "https://railway.com/railway.schema.json",
   "build": {
-    "builder": "NIXPACKS",
-    "buildCommand": "cd frontend && npm install --include=dev && npx vite build --outDir ../backend/public --emptyOutDir && cd ../backend && npm install && npx prisma generate"
+    "buildCommand": "cd backend && npm install && npx prisma generate"
   },
   "deploy": {
-    "startCommand": "cd backend && npx prisma migrate deploy && npx tsx src/index.ts",
-    "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 10
+    "startCommand": "cd backend && npx prisma migrate deploy && npx tsx src/index.ts"
   }
 }
