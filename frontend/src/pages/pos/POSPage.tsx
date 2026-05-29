@@ -108,6 +108,51 @@ export default function POSPage() {
         </div>
       )}
 
+      {/* Live Tracking toggle — visible siempre */}
+      <button
+        onClick={() => setShowLive(!showLive)}
+        className={`flex items-center justify-center gap-2 px-4 py-1.5 text-xs font-medium transition-colors ${showLive ? "bg-accent/10 text-accent border-b border-accent/20" : "bg-surface-2 text-text-muted hover:text-text border-b border-border"}`}
+      >
+        <RefreshCw className={`h-3.5 w-3.5 ${showLive ? "text-accent" : ""}`} />
+        {showLive ? "Ocultar tracking en vivo" : "Ver tracking en vivo"}
+        {liveOrders.length > 0 && (
+          <span className="ml-1 rounded-full bg-accent/20 px-1.5 text-[10px] text-accent">{liveOrders.length} activas</span>
+        )}
+      </button>
+
+      {/* Live Tracking panel */}
+      {showLive && (
+        <div className="border-b border-accent/20 bg-surface-2">
+          <div className="grid grid-cols-5 gap-1 px-4 py-3 text-xs">
+            <div className="rounded-lg bg-yellow-500/10 p-2 text-center border border-yellow-500/20">
+              <Clock className="h-4 w-4 text-yellow-400 mx-auto mb-1" />
+              <p className="font-bold text-yellow-400">{liveOrders.filter(o => o.status === "PENDING").length}</p>
+              <p className="text-yellow-500/70">Pendiente pago</p>
+            </div>
+            <div className="rounded-lg bg-info/10 p-2 text-center border border-info/20">
+              <ChefHat className="h-4 w-4 text-info mx-auto mb-1" />
+              <p className="font-bold text-info">{liveOrders.filter(o => o.status === "PAID" || o.status === "PREPARING").length}</p>
+              <p className="text-info/70">En cocina</p>
+            </div>
+            <div className="rounded-lg bg-accent/10 p-2 text-center border border-accent/20">
+              <CheckCircle className="h-4 w-4 text-accent mx-auto mb-1" />
+              <p className="font-bold text-accent">{liveOrders.filter(o => o.status === "READY").length}</p>
+              <p className="text-accent/70">Listo</p>
+            </div>
+            <div className="rounded-lg bg-green-500/10 p-2 text-center border border-green-500/20">
+              <HandPlatter className="h-4 w-4 text-green-400 mx-auto mb-1" />
+              <p className="font-bold text-green-400">{liveOrders.filter(o => o.status === "DELIVERED").length}</p>
+              <p className="text-green-500/70">Entregado</p>
+            </div>
+            <div className="rounded-lg bg-surface p-2 text-center border border-border">
+              <DollarSign className="h-4 w-4 text-text-muted mx-auto mb-1" />
+              <p className="font-bold text-text">${liveOrders.filter(o => o.status !== "PENDING").reduce((s, o) => s + o.total, 0).toFixed(0)}</p>
+              <p className="text-text-muted">Total cobrado</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Pending orders from waiters */}
       {pendingOrders.length > 0 && (
         <div className="border-b border-warning/30 bg-warning/5">
@@ -116,10 +161,7 @@ export default function POSPage() {
             <span className="text-sm font-bold text-warning">
               {pendingOrders.length} pendiente{pendingOrders.length !== 1 ? "s" : ""} de cobro
             </span>
-            <span className="text-xs text-text-muted">Tomadas por el mesero — clic para expandir</span>
-            <button onClick={() => setShowLive(!showLive)} className="btn btn-ghost ml-auto px-2 py-1 text-xs text-text-muted">
-              <Eye className="h-3.5 w-3.5 mr-1 inline" />{showLive ? "Ocultar tracking" : "Ver tracking"}
-            </button>
+            <span className="text-xs text-text-muted">Tomadas por el mesero</span>
           </div>
           <div className="flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-none">
             {pendingOrders.map(order => {
@@ -152,7 +194,7 @@ export default function POSPage() {
                     ))}
                     {!isExpanded && order.items.length > 4 && (
                       <button onClick={() => setExpandedOrder(order.id)} className="text-accent hover:underline">
-                        +{order.items.length - 4} más
+                        Ver +{order.items.length - 4} más
                       </button>
                     )}
                   </div>
@@ -184,44 +226,6 @@ export default function POSPage() {
                 </div>
               );
             })}
-          </div>
-        </div>
-      )}
-
-      {/* Live Tracking panel */}
-      {showLive && (
-        <div className="border-b border-accent/30 bg-surface-2">
-          <div className="flex items-center gap-2 px-4 py-2">
-            <RefreshCw className="h-4 w-4 text-accent" />
-            <span className="text-sm font-bold text-accent">Live Tracking — Hoy</span>
-            <span className="text-xs text-text-muted ml-auto">{liveOrders.length} órdenes activas</span>
-          </div>
-          <div className="grid grid-cols-5 gap-1 px-4 pb-3 text-xs">
-            <div className="rounded-lg bg-yellow-500/10 p-2 text-center border border-yellow-500/20">
-              <Clock className="h-4 w-4 text-yellow-400 mx-auto mb-1" />
-              <p className="font-bold text-yellow-400">{liveOrders.filter(o => o.status === "PENDING").length}</p>
-              <p className="text-yellow-500/70">Pendiente pago</p>
-            </div>
-            <div className="rounded-lg bg-info/10 p-2 text-center border border-info/20">
-              <ChefHat className="h-4 w-4 text-info mx-auto mb-1" />
-              <p className="font-bold text-info">{liveOrders.filter(o => o.status === "PAID" || o.status === "PREPARING").length}</p>
-              <p className="text-info/70">En cocina</p>
-            </div>
-            <div className="rounded-lg bg-accent/10 p-2 text-center border border-accent/20">
-              <CheckCircle className="h-4 w-4 text-accent mx-auto mb-1" />
-              <p className="font-bold text-accent">{liveOrders.filter(o => o.status === "READY").length}</p>
-              <p className="text-accent/70">Listo</p>
-            </div>
-            <div className="rounded-lg bg-green-500/10 p-2 text-center border border-green-500/20">
-              <HandPlatter className="h-4 w-4 text-green-400 mx-auto mb-1" />
-              <p className="font-bold text-green-400">{liveOrders.filter(o => o.status === "DELIVERED").length}</p>
-              <p className="text-green-500/70">Entregado</p>
-            </div>
-            <div className="rounded-lg bg-surface p-2 text-center border border-border">
-              <DollarSign className="h-4 w-4 text-text-muted mx-auto mb-1" />
-              <p className="font-bold text-text">${liveOrders.filter(o => o.status !== "PENDING").reduce((s, o) => s + o.total, 0).toFixed(0)}</p>
-              <p className="text-text-muted">Total cobrado</p>
-            </div>
           </div>
         </div>
       )}
