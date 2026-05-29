@@ -7,12 +7,158 @@ import ComboModal from "../../components/ComboModal";
 import CashRegisterModal from "../../components/CashRegisterModal";
 import * as api from "../../services/api";
 import {
-  LogOut, Search, X, ShoppingCart, Loader2, Eye, EyeOff,
+  LogOut, Search, X, ShoppingCart, Loader2, Eye, EyeOff, Pencil,
   DollarSign, AlertCircle, Banknote, CreditCard, ArrowRightLeft,
   Clock, MapPin, User, ChevronDown, ChevronUp, RefreshCw,
-  CheckCircle, Flame, ChefHat, HandPlatter,
+  CheckCircle, Flame, ChefHat, HandPlatter, Minus, Plus, Trash2,
 } from "lucide-react";
-import type { Combo, Order } from "../../types";
+import type { Combo, Order, MenuItem, CartItem } from "../../types";
+
+// ─── Edit Order Modal ───────────────────────────────────────
+function EditOrderModal({ order, products, onClose, onSaved }: {
+  order: Order;
+  products: MenuItem[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [items, setItems] = useState<Array<{
+    tempId: string;
+    menuItemId?: string;
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    notes: string;
+    kitchen: string;
+    modifiers: Array<{ modifierId: string; name: string; priceAdjustment: number }>;
+  }>>(order.items.map((i: any) => ({
+    tempId: crypto.randomUUID(),
+    menuItemId: i.menuItemId || undefined,
+    name: i.menuItem?.name || (i as any).combo?.name || "Ítem",
+    quantity: i.quantity,
+    unitPrice: i.unitPrice,
+    notes: i.notes || "",
+    kitchen: i.kitchen || "KITCHEN_1",
+    modifiers: i.modifiers || [],
+  })));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const addItem = (product: MenuItem) => {
+    setItems(prev => [...prev, {
+      tempId: crypto.randomUUID(),
+      menuItemId: product.id,
+      name: product.name,
+      quantity: 1,
+      unitPrice: product.basePrice,
+      notes: "",
+      kitchen: product.kitchen,
+      modifiers: [],
+    }]);
+  };
+
+  const updateQty = (tempId: string, delta: number) => {
+    setItems(prev => prev.map(i => i.tempId === tempId ? { ...i, quantity: Math.max(1, i.quantity + delta) } : i));
+  };
+
+  const removeItem = (tempId: string) => {
+    setItems(prev => prev.filter(i => i.tempId !== tempId));
+  };
+
+  const updateNotes = (tempId: string, notes: string) => {
+    setItems(prev => prev.map(i => i.tempId === tempId ? { ...i, notes } : i));
+  };
+
+  const save = async () => {
+    if (items.length === 0) { setError("Debe haber al menos un ítem"); return; }
+    setSaving(true);
+    setError(null);
+    try {
+      await api.orders.updateItems(order.id, items.map(i => ({
+        menuItemId: i.menuItemId,
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+        notes: i.notes || undefined,
+        kitchen: i.kitchen,
+        modifiers: i.modifiers,
+      })));
+      onSaved();
+      onClose();
+    } catch (e: any) {
+      setError(e.message || "Error al guardar");
+    }
+    setSaving(false);
+  };
+
+  // Filter products by category for quick add
+  const [catFilter, setCatFilter] = useState<string | null>(null);
+  const filteredAdd = catFilter
+    ? products.filter(p => p.categoryId === catFilter && !items.some(i => i.menuItemId === p.id))
+    : products.filter(p => !items.some(i => i.menuItemId === p.id)).slice(0, 20);
+
+  // Group categories
+  const cats = [...new Set(products.map(p => p.categoryId))];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-2">
+      <div className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl bg-surface-2 border border-border p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold text-text">Editar Orden #{order.orderNumber}</h3>
+          <button onClick={onClose} className="btn btn-ghost p-1"><X className="h-5 w-5 text-text-muted" /></button>
+        </div>
+
+        {error && <div className="bg-danger/10 border border-danger/20 text-danger text-sm rounded-xl px-3 py-2">{error}</div>}
+
+        {/* Items actuales */}
+        <div className="space-y-2">
+          {items.map(item => (
+            <div key={item.tempId} className="rounded-xl bg-surface p-3 flex items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-text">{item.name}</p>
+                {item.notes && <p className="text-xs text-warning">📝 {item.notes}</p>}
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <button onClick={() => updateQty(item.tempId, -1)} className="btn btn-ghost p-1 h-7 w-7"><Minus className="h-3.5 w-3.5" /></button>
+                <span className="w-6 text-center text-sm text-text font-medium">{item.quantity}</span>
+                <button onClick={() => updateQty(item.tempId, 1)} className="btn btn-ghost p-1 h-7 w-7"><Plus className="h-3.5 w-3.5" /></button>
+              </div>
+              <p className="text-sm font-bold text-accent shrink-0">${(item.unitPrice * item.quantity).toFixed(2)}</p>
+              <button onClick={() => removeItem(item.tempId)} className="btn btn-ghost p-1 text-danger shrink-0"><Trash2 className="h-4 w-4" /></button>
+            </div>
+          ))}
+        </div>
+
+        {/* Añadir productos */}
+        <div>
+          <div className="flex gap-1 overflow-x-auto pb-2 scrollbar-none">
+            <button onClick={() => setCatFilter(null)} className={`btn shrink-0 px-2 py-1 text-xs ${!catFilter ? "bg-accent text-white" : "btn-ghost"}`}>Sugeridos</button>
+            {cats.map(c => {
+              const cat = products.find(p => p.categoryId === c)?.category;
+              return (
+                <button key={c} onClick={() => setCatFilter(c)} className={`btn shrink-0 px-2 py-1 text-xs ${catFilter === c ? "bg-accent text-white" : "btn-ghost"}`}>{cat?.name || c}</button>
+              );
+            })}
+          </div>
+          <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
+            {filteredAdd.slice(0, 8).map(p => (
+              <button key={p.id} onClick={() => addItem(p)}
+                className="rounded-lg border border-border bg-surface p-2 text-left hover:border-accent transition-colors"
+              >
+                <p className="text-xs font-medium text-text truncate">{p.name}</p>
+                <p className="text-xs text-accent">+${p.basePrice.toFixed(2)}</p>
+              </button>
+            ))}
+          </div>
+          {filteredAdd.length === 0 && <p className="text-xs text-text-muted text-center py-2">Todos los productos ya están en la orden</p>}
+        </div>
+
+        <button onClick={save} disabled={saving || items.length === 0}
+          className="btn btn-primary w-full py-3 font-bold">
+          {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : "Guardar cambios"}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function POSPage() {
   const { user, logout } = useAuth();
@@ -54,6 +200,18 @@ export default function POSPage() {
       pos.set("error", e.message || "Error al confirmar pago");
     }
     setPayingOrderId(null);
+  };
+
+  // Edit/Cancel pending orders
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+
+  const cancelOrder = async (orderId: string) => {
+    try {
+      await api.orders.updateStatus(orderId, "CANCELLED", "Cancelado desde caja");
+      setPendingOrders(p => p.filter(o => o.id !== orderId));
+    } catch (e: any) {
+      pos.set("error", e.message || "Error");
+    }
   };
 
   if (pos.loading) {
@@ -216,12 +374,20 @@ export default function POSPage() {
                         key={method}
                         onClick={() => confirmPayment(order.id, method)}
                         disabled={payingOrderId === order.id}
-                        className="btn flex-col gap-0.5 py-1.5 text-[10px] bg-accent/10 text-accent hover:bg-accent/20 disabled:opacity-50"
-                      >
+                        className="btn flex-col gap-0.5 py-1.5 text-[10px] bg-accent/10 text-accent hover:bg-accent/20 disabled:opacity-50">
                         {payingOrderId === order.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icon className="h-3.5 w-3.5" />}
                         {label}
                       </button>
                     ))}
+                  </div>
+                  {/* Edit + Cancel buttons */}
+                  <div className="grid grid-cols-2 gap-1 mt-2">
+                    <button onClick={() => setEditingOrder(order)} className="btn btn-ghost py-1 text-xs text-info border border-info/20">
+                      <Pencil className="h-3.5 w-3.5 inline mr-1" />Editar
+                    </button>
+                    <button onClick={() => cancelOrder(order.id)} className="btn btn-ghost py-1 text-xs text-danger border border-danger/20">
+                      <Trash2 className="h-3.5 w-3.5 inline mr-1" />Eliminar
+                    </button>
                   </div>
                 </div>
               );
@@ -388,6 +554,16 @@ export default function POSPage() {
           <ShoppingCart className="h-5 w-5" />
           Ver orden ({cartCount})
         </button>
+      )}
+
+      {/* Edit Order Modal */}
+      {editingOrder && (
+        <EditOrderModal
+          order={editingOrder}
+          products={pos.products}
+          onClose={() => setEditingOrder(null)}
+          onSaved={() => { fetchLive(); }}
+        />
       )}
     </div>
   );

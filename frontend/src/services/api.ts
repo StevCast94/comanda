@@ -175,6 +175,20 @@ export const orders = {
     }),
 
   live: () => request<{ orders: import("../types").Order[] }>("/orders/live"),
+
+  updateItems: (id: string, items: Array<{
+    menuItemId?: string;
+    comboId?: string;
+    quantity: number;
+    unitPrice: number;
+    notes?: string;
+    kitchen?: string;
+    modifiers?: Array<{ modifierId: string; name: string; priceAdjustment: number }>;
+    comboSelections?: Record<string, string>;
+  }>) => request<{ order: import("../types").Order }>(`/orders/${id}/items`, {
+    method: "PATCH",
+    body: JSON.stringify({ items }),
+  }),
 };
 
 // ─── Kitchen ────────────────────────────────────────────────

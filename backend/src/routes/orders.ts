@@ -332,6 +332,78 @@ ordRouter.patch("/:id/confirm-payment", ordAuthz("CASHIER", "ADMIN"), async (req
   }
 });
 
+// PATCH /api/orders/:id/items — update items (CASHIER edits pending order)
+ordRouter.patch("/:id/items", ordAuthz("CASHIER", "ADMIN"), async (req: OrdReq, res: OrdRes) => {
+  try {
+    const { items } = req.body;
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      res.status(400).json({ error: "Se requiere al menos un ítem" });
+      return;
+    }
+
+    const order = await ordPrisma.order.findUnique({
+      where: { id: req.params.id as string },
+      include: { items: true },
+    });
+    if (!order) { res.status(404).json({ error: "Orden no encontrada" }); return; }
+    if (order.status !== "PENDING") {
+      res.status(400).json({ error: "Solo se pueden editar órdenes pendientes" });
+      return;
+    }
+
+    // Delete existing items
+    await ordPrisma.orderItem.deleteMany({ where: { orderId: order.id } });
+
+    // Create new items
+    let subtotal = 0;
+    const newItems = items.map((item: any) => {
+      const modTotal = (item.modifiers || []).reduce((s: number, m: any) => s + m.priceAdjustment, 0);
+      const totalPrice = (item.unitPrice + modTotal) * item.quantity;
+      subtotal += totalPrice;
+      return {
+        menuItemId: item.menuItemId || null,
+        comboId: item.comboId || null,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice,
+        notes: item.notes,
+        kitchen: item.kitchen || "KITCHEN_1",
+        modifiers: item.modifiers || [],
+        comboSelections: item.comboSelections || undefined,
+      };
+    });
+
+    const restaurant = await ordPrisma.restaurant.findUnique({ where: { id: req.restaurantId! } });
+    const settings = (restaurant?.settings as Record<string, number>) || {};
+    const taxRate = settings.taxRate ?? 0.15;
+    const serviceRate = settings.serviceRate ?? 0.10;
+    const taxAmount = Math.round(subtotal * taxRate * 100) / 100;
+    const serviceAmount = Math.round(subtotal * serviceRate * 100) / 100;
+    const total = Math.round((subtotal + taxAmount + serviceAmount) * 100) / 100;
+
+    const updated = await ordPrisma.order.update({
+      where: { id: order.id },
+      data: {
+        subtotal,
+        taxAmount,
+        serviceAmount,
+        total,
+        items: { create: newItems },
+      },
+      include: {
+        items: { include: { menuItem: { select: { name: true } }, combo: { select: { name: true } } } },
+        table: true,
+        waiter: { select: { name: true } },
+      },
+    });
+
+    res.json({ order: updated });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error actualizando items" });
+  }
+});
+
 export { ordRouter as default };
 
 
