@@ -11,6 +11,7 @@ const router = (0, express_1.Router)();
 const registerSchema = zod_1.z.object({
     restaurantName: zod_1.z.string().min(2, "Nombre del restaurante requerido"),
     slug: zod_1.z.string().min(2).max(50).regex(/^[a-z0-9-]+$/, "Solo letras minúsculas, números y guiones"),
+    type: zod_1.z.enum(["COMIDA_RAPIDA", "CEVICHERIA", "COCKTELERIA", "BAR", "PARRILLADA", "RESTAURANTE", "CAFETERIA", "PIZZERIA", "MARISQUERIA", "OTRO"]).optional().default("RESTAURANTE"),
     address: zod_1.z.string().optional(),
     phone: zod_1.z.string().optional(),
     adminName: zod_1.z.string().min(2, "Nombre del administrador requerido"),
@@ -41,6 +42,7 @@ router.post("/", async (req, res) => {
                 data: {
                     name: data.restaurantName,
                     slug: data.slug,
+                    type: data.type || "RESTAURANTE",
                     address: data.address,
                     phone: data.phone,
                     settings: { taxRate: 0.15, serviceRate: 0.10, defaultTip: 0 },

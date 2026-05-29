@@ -136,7 +136,9 @@ export const users = {
 export const orders = {
   create: (data: {
     tableId?: string; customerName?: string; orderType: string;
-    paymentMethod: string; notes?: string;
+    status?: "PENDING" | "PAID";
+    paymentMethod?: string; notes?: string;
+    waiterId?: string;
     items: Array<{
       menuItemId?: string; comboId?: string; quantity: number; unitPrice: number;
       notes?: string; kitchen: string;
@@ -164,6 +166,12 @@ export const orders = {
     request<{ order: import("../types").Order }>(`/orders/${id}/status`, {
       method: "PATCH",
       body: JSON.stringify({ status, reason }),
+    }),
+
+  confirmPayment: (id: string, paymentMethod: string) =>
+    request<{ order: import("../types").Order }>(`/orders/${id}/confirm-payment`, {
+      method: "PATCH",
+      body: JSON.stringify({ paymentMethod }),
     }),
 };
 

@@ -1,21 +1,47 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { usePOS } from "../../hooks/usePOS";
 import ProductCard from "../../components/ProductCard";
 import OrderPanel from "../../components/OrderPanel";
 import ComboModal from "../../components/ComboModal";
 import CashRegisterModal from "../../components/CashRegisterModal";
+import * as api from "../../services/api";
 import {
   LogOut, Search, X, ShoppingCart, Loader2,
-  DollarSign, AlertCircle, ChevronLeft, ChevronRight,
+  DollarSign, AlertCircle, Banknote, CreditCard, ArrowRightLeft,
+  Clock, MapPin, User,
 } from "lucide-react";
-import type { Combo } from "../../types";
+import type { Combo, Order } from "../../types";
 
 export default function POSPage() {
   const { user, logout } = useAuth();
   const pos = usePOS();
   const [showCashModal, setShowCashModal] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<"menu" | "order">("menu");
+
+  // Pending orders from waiters
+  const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
+  const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
+
+  const fetchPending = useCallback(async () => {
+    try {
+      const { orders } = await api.orders.list({ status: "PENDING" });
+      setPendingOrders(orders || []);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { fetchPending(); const t = setInterval(fetchPending, 10000); return () => clearInterval(t); }, [fetchPending]);
+
+  const confirmPayment = async (orderId: string, method: string) => {
+    setPayingOrderId(orderId);
+    try {
+      await api.orders.confirmPayment(orderId, method);
+      setPendingOrders(p => p.filter(o => o.id !== orderId));
+    } catch (e: any) {
+      pos.set("error", e.message || "Error al confirmar pago");
+    }
+    setPayingOrderId(null);
+  };
 
   if (pos.loading) {
     return (
@@ -66,6 +92,63 @@ export default function POSPage() {
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span className="flex-1">{pos.error}</span>
           <button onClick={() => pos.set("error", null)}><X className="h-4 w-4" /></button>
+        </div>
+      )}
+
+      {/* Pending orders from waiters */}
+      {pendingOrders.length > 0 && (
+        <div className="border-b border-warning/30 bg-warning/5">
+          <div className="flex items-center gap-2 px-4 py-2">
+            <Clock className="h-4 w-4 text-warning" />
+            <span className="text-sm font-bold text-warning">{pendingOrders.length} pendiente{pendingOrders.length !== 1 ? "s" : ""} de cobro</span>
+            <span className="text-xs text-text-muted ml-auto">Tomadas por el mesero</span>
+          </div>
+          <div className="flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-none">
+            {pendingOrders.map(order => (
+              <div key={order.id} className="flex-shrink-0 w-64 rounded-xl border border-warning/20 bg-surface-2 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-bold text-text">#{order.orderNumber}</span>
+                  {order.table && (
+                    <span className="flex items-center gap-1 text-xs text-text-muted">
+                      <MapPin className="h-3 w-3" />M{order.table.number}
+                    </span>
+                  )}
+                </div>
+                {order.customerName && (
+                  <p className="flex items-center gap-1 text-xs text-text-muted mb-1"><User className="h-3 w-3" />{order.customerName}</p>
+                )}
+                {order.waiter && (
+                  <p className="text-xs text-text-muted mb-1">Mesero: {order.waiter.name}</p>
+                )}
+                <div className="text-xs text-text-muted mb-2 space-y-0.5">
+                  {order.items.slice(0, 4).map(item => (
+                    <p key={item.id} className="truncate">{item.quantity}x {item.menuItem?.name || (item as any).combo?.name}</p>
+                  ))}
+                  {order.items.length > 4 && <p className="text-text-muted">+{order.items.length - 4} más</p>}
+                </div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-bold text-accent">${order.total.toFixed(2)}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-1">
+                  {[
+                    { label: "Efe", method: "CASH", icon: Banknote },
+                    { label: "Tarj", method: "CARD", icon: CreditCard },
+                    { label: "Trans", method: "TRANSFER", icon: ArrowRightLeft },
+                  ].map(({ label, method, icon: Icon }) => (
+                    <button
+                      key={method}
+                      onClick={() => confirmPayment(order.id, method)}
+                      disabled={payingOrderId === order.id}
+                      className="btn flex-col gap-0.5 py-1.5 text-[10px] bg-accent/10 text-accent hover:bg-accent/20 disabled:opacity-50"
+                    >
+                      {payingOrderId === order.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icon className="h-3.5 w-3.5" />}
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

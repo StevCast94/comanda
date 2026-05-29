@@ -231,6 +231,7 @@ export function usePOS() {
         tableId: state.selectedTable?.id,
         customerName: state.customerName || undefined,
         orderType: state.orderType,
+        status: "PAID" as const,
         paymentMethod,
         items: state.cart.map((c) => ({
           menuItemId: c.menuItemId,
@@ -253,6 +254,43 @@ export function usePOS() {
       setSubmitting(false);
     }
   }, [state.cart, state.selectedTable, state.customerName, state.orderType, state.cashRegister, clearCart, set]);
+
+  // Submit order as PENDING (waiter mode — no payment, no cash register)
+  const submitPendingOrder = useCallback(async () => {
+    if (state.cart.length === 0) return;
+    if (state.orderType === "DINE_IN" && !state.selectedTable) {
+      set("error", "Selecciona una mesa");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const orderData = {
+        tableId: state.selectedTable?.id,
+        customerName: state.customerName || undefined,
+        orderType: state.orderType,
+        status: "PENDING" as const,
+        items: state.cart.map((c) => ({
+          menuItemId: c.menuItemId,
+          comboId: c.comboId,
+          quantity: c.quantity,
+          unitPrice: c.unitPrice,
+          notes: c.notes || undefined,
+          kitchen: c.kitchen,
+          modifiers: c.modifiers,
+          comboSelections: c.comboSelections,
+        })),
+      };
+      const { order } = await api.orders.create(orderData);
+      clearCart();
+      return order;
+    } catch (err) {
+      set("error", err instanceof Error ? err.message : "Error al crear orden");
+      throw err;
+    } finally {
+      setSubmitting(false);
+    }
+  }, [state.cart, state.selectedTable, state.customerName, state.orderType, clearCart, set]);
 
   // ─── Cash register operations ─────────────────────────────
   const openCashRegister = useCallback(async (balance: number) => {
@@ -281,6 +319,7 @@ export function usePOS() {
     clearCart,
     totals,
     submitOrder,
+    submitPendingOrder,
     submitting,
     openCashRegister,
     closeCashRegister,

@@ -14,7 +14,9 @@ const createOrderSchema = zod_1.z.object({
     tableId: zod_1.z.string().optional(),
     customerName: zod_1.z.string().optional(),
     orderType: zod_1.z.enum(["DINE_IN", "TAKEAWAY", "DELIVERY"]),
-    paymentMethod: zod_1.z.enum(["CASH", "CARD", "TRANSFER"]),
+    status: zod_1.z.enum(["PENDING", "PAID"]).optional(),
+    paymentMethod: zod_1.z.enum(["CASH", "CARD", "TRANSFER"]).optional(),
+    waiterId: zod_1.z.string().optional(),
     notes: zod_1.z.string().optional(),
     items: zod_1.z.array(zod_1.z.object({
         menuItemId: zod_1.z.string().optional(),
@@ -31,23 +33,32 @@ const createOrderSchema = zod_1.z.object({
         comboSelections: zod_1.z.record(zod_1.z.string()).optional(),
     })).min(1, "La orden debe tener al menos un ítem"),
 });
-// POST /api/orders — Create order (CASHIER, ADMIN)
-ordRouter.post("/", (0, auth_1.authorize)("CASHIER", "ADMIN"), async (req, res) => {
+// POST /api/orders — Create order (CASHIER, ADMIN, WAITER)
+ordRouter.post("/", (0, auth_1.authorize)("CASHIER", "ADMIN", "WAITER"), async (req, res) => {
     try {
         const data = createOrderSchema.parse(req.body);
         const rId = req.restaurantId;
+        const isPending = data.status === "PENDING";
         // Validate DINE_IN requires table
         if (data.orderType === "DINE_IN" && !data.tableId) {
             res.status(400).json({ error: "Mesa requerida para pedidos en salón" });
             return;
         }
-        // Check cash register is open
-        const openRegister = await index_1.prisma.cashRegister.findFirst({
-            where: { restaurantId: rId, status: "OPEN" },
-        });
-        if (!openRegister) {
-            res.status(400).json({ error: "No hay caja abierta. Abre la caja antes de cobrar." });
+        // Payment required unless PENDING
+        if (!isPending && !data.paymentMethod) {
+            res.status(400).json({ error: "Método de pago requerido" });
             return;
+        }
+        // Check cash register only for paid orders
+        let openRegister = null;
+        if (!isPending) {
+            openRegister = await index_1.prisma.cashRegister.findFirst({
+                where: { restaurantId: rId, status: "OPEN" },
+            });
+            if (!openRegister) {
+                res.status(400).json({ error: "No hay caja abierta. Abre la caja antes de cobrar." });
+                return;
+            }
         }
         // Get restaurant settings for tax/service
         const restaurant = await index_1.prisma.restaurant.findUnique({ where: { id: rId } });
@@ -89,34 +100,38 @@ ordRouter.post("/", (0, auth_1.authorize)("CASHIER", "ADMIN"), async (req, res) 
                 tableId: data.tableId || null,
                 customerName: data.customerName,
                 orderType: data.orderType,
-                status: "PAID",
+                status: isPending ? "PENDING" : "PAID",
                 subtotal,
                 taxRate,
                 taxAmount,
                 serviceRate,
                 serviceAmount,
                 total,
-                paymentMethod: data.paymentMethod,
+                paymentMethod: isPending ? null : data.paymentMethod,
                 cashierId: req.user.userId,
-                paidAt: new Date(),
+                waiterId: data.waiterId || (req.user.role === "WAITER" ? req.user.userId : null),
+                paidAt: isPending ? null : new Date(),
                 notes: data.notes,
                 items: { create: orderItems },
             },
             include: {
                 items: { include: { menuItem: true, combo: true } },
                 table: true,
+                waiter: { select: { name: true } },
             },
         });
-        // Update cash register totals
-        const updateField = data.paymentMethod === "CASH" ? "totalCash"
-            : data.paymentMethod === "CARD" ? "totalCard" : "totalTransfer";
-        await index_1.prisma.cashRegister.update({
-            where: { id: openRegister.id },
-            data: {
-                totalSales: { increment: total },
-                [updateField]: { increment: total },
-            },
-        });
+        // Update cash register totals only for paid orders
+        if (!isPending && openRegister) {
+            const updateField = data.paymentMethod === "CASH" ? "totalCash"
+                : data.paymentMethod === "CARD" ? "totalCard" : "totalTransfer";
+            await index_1.prisma.cashRegister.update({
+                where: { id: openRegister.id },
+                data: {
+                    totalSales: { increment: total },
+                    [updateField]: { increment: total },
+                },
+            });
+        }
         res.status(201).json({ order });
     }
     catch (err) {
@@ -135,8 +150,10 @@ ordRouter.get("/", async (req, res) => {
         const where = {};
         if (req.restaurantId)
             where.restaurantId = req.restaurantId;
-        if (status)
-            where.status = status;
+        if (status) {
+            const statusStr = status;
+            where.status = statusStr.includes(",") ? { in: statusStr.split(",") } : statusStr;
+        }
         if (date) {
             const d = new Date(date);
             where.createdAt = {
@@ -207,6 +224,65 @@ ordRouter.patch("/:id/status", async (req, res) => {
     catch (err) {
         console.error(err);
         res.status(500).json({ error: "Error actualizando estado" });
+    }
+});
+// PATCH /api/orders/:id/confirm-payment — CASHIER confirms payment for PENDING orders
+ordRouter.patch("/:id/confirm-payment", (0, auth_1.authorize)("CASHIER", "ADMIN"), async (req, res) => {
+    try {
+        const { paymentMethod } = req.body;
+        if (!paymentMethod || !["CASH", "CARD", "TRANSFER"].includes(paymentMethod)) {
+            res.status(400).json({ error: "Método de pago requerido (CASH, CARD, TRANSFER)" });
+            return;
+        }
+        const order = await index_1.prisma.order.findUnique({
+            where: { id: req.params.id },
+        });
+        if (!order) {
+            res.status(404).json({ error: "Orden no encontrada" });
+            return;
+        }
+        if (order.status !== "PENDING") {
+            res.status(400).json({ error: "Solo se pueden confirmar órdenes pendientes" });
+            return;
+        }
+        // Check cash register is open
+        const openRegister = await index_1.prisma.cashRegister.findFirst({
+            where: { restaurantId: req.restaurantId, status: "OPEN" },
+        });
+        if (!openRegister) {
+            res.status(400).json({ error: "No hay caja abierta. Abre la caja antes de cobrar." });
+            return;
+        }
+        // Update order to PAID
+        const updated = await index_1.prisma.order.update({
+            where: { id: req.params.id },
+            data: {
+                status: "PAID",
+                paymentMethod,
+                cashierId: req.user.userId,
+                paidAt: new Date(),
+            },
+            include: {
+                items: { include: { menuItem: true, combo: true } },
+                table: true,
+                waiter: { select: { name: true } },
+            },
+        });
+        // Update cash register totals
+        const updateField = paymentMethod === "CASH" ? "totalCash"
+            : paymentMethod === "CARD" ? "totalCard" : "totalTransfer";
+        await index_1.prisma.cashRegister.update({
+            where: { id: openRegister.id },
+            data: {
+                totalSales: { increment: updated.total },
+                [updateField]: { increment: updated.total },
+            },
+        });
+        res.json({ order: updated });
+    }
+    catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Error confirmando pago" });
     }
 });
 //# sourceMappingURL=orders.js.map
