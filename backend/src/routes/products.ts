@@ -14,7 +14,7 @@ const productSchema = z.object({
   basePrice: z.number().nonnegative(),
   categoryId: z.string().min(1),
   type: z.enum(["MAIN", "PROTEIN", "SIDE", "DRINK", "DESSERT"]),
-  kitchen: z.enum(["KITCHEN_1", "KITCHEN_2", "BAR", "BOTH", "NONE"]).default("NONE"),
+  kitchen: z.enum(["KITCHEN_1", "KITCHEN_2", "BAR", "BOTH", "NONE"]).default("KITCHEN_1"),
   active: z.boolean().optional(),
   image: z.string().url().optional().nullable(),
   prepTime: z.number().int().positive().optional(),

@@ -261,7 +261,7 @@ model MenuItem {
   categoryId   String
   restaurantId String
   type         MenuItemType
-  kitchen      KitchenStation @default(NONE)
+  kitchen      KitchenStation @default(KITCHEN_1)
   active       Boolean        @default(true)
   image        String?
   prepTime     Int            @default(10)
@@ -403,7 +403,7 @@ model OrderItem {
   unitPrice  Float
   totalPrice Float
   notes      String?
-  kitchen    KitchenStation  @default(NONE)
+  kitchen    KitchenStation  @default(KITCHEN_1)
   status     OrderItemStatus @default(PENDING)
   modifiers  Json            @default("[]")
   comboSelections Json?

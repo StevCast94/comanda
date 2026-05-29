@@ -284,7 +284,7 @@ ordRouter.patch("/:id/confirm-payment", ordAuthz("CASHIER", "ADMIN"), async (req
       return;
     }
 
-    // Update order to PAID
+    // Update order to PAID first
     const updated = await ordPrisma.order.update({
       where: { id: req.params.id as string },
       data: {
@@ -294,11 +294,25 @@ ordRouter.patch("/:id/confirm-payment", ordAuthz("CASHIER", "ADMIN"), async (req
         paidAt: new Date(),
       },
       include: {
-        items: { include: { menuItem: true, combo: true } },
+        items: true,
         table: true,
         waiter: { select: { name: true } },
       },
     });
+
+    // If ALL items have kitchen NONE (bebidas, postres), auto-advance to READY
+    const allItemsNone = updated.items.length > 0 && updated.items.every((item: any) => item.kitchen === "NONE");
+    if (allItemsNone) {
+      await ordPrisma.orderItem.updateMany({
+        where: { orderId: updated.id },
+        data: { status: "READY", readyAt: new Date() },
+      });
+      await ordPrisma.order.update({
+        where: { id: updated.id },
+        data: { status: "READY" },
+      });
+      updated.status = "READY";
+    }
 
     // Update cash register totals
     const updateField = paymentMethod === "CASH" ? "totalCash"
@@ -311,7 +325,7 @@ ordRouter.patch("/:id/confirm-payment", ordAuthz("CASHIER", "ADMIN"), async (req
       },
     });
 
-    res.json({ order: updated });
+    res.json({ order: allItemsNone ? finalOrder : updated });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Error confirmando pago" });

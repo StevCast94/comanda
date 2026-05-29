@@ -300,7 +300,7 @@ export default function WaiterPage() {
 
       {/* ─── TAB: TOMAR ORDEN ───────────────────────────────── */}
       {tab === "tomar" && (
-        <div className="flex flex-1 overflow-hidden">
+        <>
           {successOrder && (
             <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40">
               <div className="flex flex-col items-center gap-4 rounded-2xl bg-surface-2 p-10 shadow-xl border border-accent/30">
@@ -311,143 +311,194 @@ export default function WaiterPage() {
             </div>
           )}
 
-          {/* LEFT: Menu */}
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <div className="flex gap-1 overflow-x-auto border-b border-border bg-surface-2 px-3 py-2 scrollbar-none">
-              <button onClick={() => setSelectedCategory(null)} className={`btn shrink-0 px-3 py-1.5 text-xs ${!selectedCategory ? "bg-accent text-white" : "btn-ghost"}`}>Todos</button>
+          {/* MOBILE: full-width menu, cart as bottom sheet */}
+          <div className="flex flex-1 flex-col overflow-hidden lg:hidden">
+            {/* Category + Search bar */}
+            <div className="flex gap-1 overflow-x-auto border-b border-border bg-surface-2 px-2 py-2 scrollbar-none">
+              <button onClick={() => setSelectedCategory(null)} className={`btn shrink-0 px-2.5 py-1.5 text-xs ${!selectedCategory ? "bg-accent text-white" : "btn-ghost"}`}>Todos</button>
               {categories.map(cat => (
-                <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} className={`btn shrink-0 px-3 py-1.5 text-xs ${selectedCategory === cat.id ? "bg-accent text-white" : "btn-ghost"}`}>{cat.name}</button>
+                <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} className={`btn shrink-0 px-2.5 py-1.5 text-xs ${selectedCategory === cat.id ? "bg-accent text-white" : "btn-ghost"}`}>{cat.name}</button>
               ))}
             </div>
-            <div className="border-b border-border bg-surface-2 px-3 py-2">
+            <div className="border-b border-border bg-surface-2 px-2 py-1.5">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
-                <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-8 text-sm text-text outline-none focus:border-accent" />
+                <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+                <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar producto..." className="w-full rounded-lg border border-border bg-surface py-2 pl-8 pr-8 text-sm text-text outline-none focus:border-accent" />
                 {search && <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted"><X className="h-4 w-4" /></button>}
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto p-3">
+            {/* Products grid — responsive columns */}
+            <div className="flex-1 overflow-y-auto p-2">
               {orderLoading ? (
                 <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-accent" /></div>
               ) : (
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
                   {filteredProducts.map(p => (
                     <ProductCard key={p.id} product={p} onAdd={() => addProduct(p)} />
                   ))}
                 </div>
               )}
               {!orderLoading && filteredProducts.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-20 text-text-muted"><Search className="mb-2 h-8 w-8" /><p>Sin productos</p></div>
+                <div className="flex flex-col items-center justify-center py-16 text-text-muted"><Search className="mb-2 h-8 w-8" /><p>Sin productos</p></div>
               )}
+            </div>
+
+            {/* Bottom bar: table + cart summary + send */}
+            <div className="border-t border-border bg-surface-2 px-2 py-2 space-y-1.5">
+              <div className="flex gap-1.5 items-center">
+                <User className="h-4 w-4 text-text-muted shrink-0" />
+                <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Cliente" className="flex-1 bg-surface border border-border rounded-lg px-2 py-1.5 text-sm text-text outline-none focus:border-accent" />
+                <span className="text-xs text-text-muted shrink-0">{cart.length} items</span>
+              </div>
+              <div className="flex gap-1.5">
+                <select
+                  value={selectedTable?.id || ""}
+                  onChange={e => { const t = tables.find(tt => tt.id === e.target.value); if (t) setSelectedTable(t); }}
+                  className="flex-1 rounded-lg border border-border bg-surface px-2 py-2 text-sm text-text outline-none focus:border-accent"
+                >
+                  <option value="">Seleccionar mesa</option>
+                  {tables.map(t => (
+                    <option key={t.id} value={t.id}>Mesa {t.number} ({t.floor})</option>
+                  ))}
+                </select>
+                <button onClick={submitWaiterOrder} disabled={submitting || !selectedTable || cart.length === 0}
+                  className="btn btn-primary px-4 py-2 text-sm font-bold disabled:opacity-40 shrink-0">
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <>${totals.total.toFixed(0)} — Enviar</>}
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* RIGHT: Order panel */}
-          <div className="w-[350px] border-l border-border bg-surface-2 flex flex-col">
-            {/* Table selector + customer */}
-            <div className="space-y-2 border-b border-border p-3">
-              <p className="text-xs font-medium text-text-muted uppercase tracking-wider">Mesa</p>
-              <div className="grid grid-cols-4 gap-1 max-h-40 overflow-y-auto">
-                {tables.map(t => (
-                  <button key={t.id} onClick={() => setSelectedTable(t)}
-                    className={`btn px-2 py-2 text-xs ${selectedTable?.id === t.id ? "bg-accent text-white" : "btn-ghost"}`}
-                  >M{t.number}</button>
+          {/* DESKTOP: side-by-side (existing layout) */}
+          <div className="hidden lg:flex flex-1 overflow-hidden">
+            <div className="flex flex-1 flex-col overflow-hidden">
+              <div className="flex gap-1 overflow-x-auto border-b border-border bg-surface-2 px-3 py-2 scrollbar-none">
+                <button onClick={() => setSelectedCategory(null)} className={`btn shrink-0 px-3 py-1.5 text-xs ${!selectedCategory ? "bg-accent text-white" : "btn-ghost"}`}>Todos</button>
+                {categories.map(cat => (
+                  <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} className={`btn shrink-0 px-3 py-1.5 text-xs ${selectedCategory === cat.id ? "bg-accent text-white" : "btn-ghost"}`}>{cat.name}</button>
                 ))}
               </div>
-              <div className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2">
-                <User className="h-4 w-4 text-text-muted" />
-                <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Nombre cliente" className="flex-1 bg-transparent text-sm text-text outline-none" />
+              <div className="border-b border-border bg-surface-2 px-3 py-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+                  <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-8 text-sm text-text outline-none focus:border-accent" />
+                  {search && <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted"><X className="h-4 w-4" /></button>}
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-3">
+                {orderLoading ? (
+                  <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-accent" /></div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {filteredProducts.map(p => (
+                      <ProductCard key={p.id} product={p} onAdd={() => addProduct(p)} />
+                    ))}
+                  </div>
+                )}
+                {!orderLoading && filteredProducts.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-20 text-text-muted"><Search className="mb-2 h-8 w-8" /><p>Sin productos</p></div>
+                )}
               </div>
             </div>
-
-            {/* Cart */}
-            <div className="flex-1 overflow-y-auto p-3">
-              {cart.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-text-muted">
-                  <ShoppingCart className="mb-2 h-10 w-10 opacity-30" />
-                  <p className="text-sm">Agrega productos</p>
+            <div className="w-[350px] border-l border-border bg-surface-2 flex flex-col">
+              <div className="space-y-2 border-b border-border p-3">
+                <p className="text-xs font-medium text-text-muted uppercase tracking-wider">Mesa</p>
+                <div className="grid grid-cols-4 gap-1 max-h-40 overflow-y-auto">
+                  {tables.map(t => (
+                    <button key={t.id} onClick={() => setSelectedTable(t)}
+                      className={`btn px-2 py-2 text-xs ${selectedTable?.id === t.id ? "bg-accent text-white" : "btn-ghost"}`}
+                    >M{t.number}</button>
+                  ))}
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  {cart.map(item => {
-                    const modTotal = item.modifiers.reduce((s, m) => s + m.priceAdjustment, 0);
-                    const lineTotal = (item.unitPrice + modTotal) * item.quantity;
-                    return (
-                      <div key={item.tempId} className="rounded-lg bg-surface p-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-text">{item.name}</p>
-                            {item.modifiers.length > 0 && (
-                              <div className="mt-0.5 text-xs text-accent">
-                                {item.modifiers.map(m => <span key={m.modifierId} className="mr-2">+{m.name}{m.priceAdjustment > 0 && ` ($${m.priceAdjustment.toFixed(2)})`}</span>)}
-                              </div>
-                            )}
-                            {item.notes && <p className="mt-0.5 text-xs italic text-warning">📝 {item.notes}</p>}
-                          </div>
-                          <span className="text-sm font-bold text-text">${lineTotal.toFixed(2)}</span>
-                        </div>
-                        <div className="mt-2 flex items-center justify-between">
-                          <div className="flex items-center gap-1">
-                            <button onClick={() => updateQty(item.tempId, -1)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-3 text-text-muted"><Minus className="h-3.5 w-3.5" /></button>
-                            <span className="w-8 text-center text-sm font-medium text-text">{item.quantity}</span>
-                            <button onClick={() => updateQty(item.tempId, 1)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-3 text-text-muted"><Plus className="h-3.5 w-3.5" /></button>
-                          </div>
-                          <div className="flex gap-1">
-                            <button onClick={() => setEditingNotes(editingNotes === item.tempId ? null : item.tempId)} className={`btn btn-ghost p-1.5 ${item.notes ? "text-warning" : "text-text-muted"}`}><StickyNote className="h-3.5 w-3.5" /></button>
-                            {item.menuItemId && products.find(p => p.id === item.menuItemId)?.modifiers?.length ? (
-                              <button onClick={() => setShowModifiers(showModifiers === item.tempId ? null : item.tempId)} className="btn btn-ghost p-1.5 text-text-muted"><ChevronDown className="h-3.5 w-3.5" /></button>
-                            ) : null}
-                            <button onClick={() => removeItem(item.tempId)} className="btn btn-ghost p-1.5 text-danger"><Trash2 className="h-3.5 w-3.5" /></button>
-                          </div>
-                        </div>
-                        {editingNotes === item.tempId && (
-                          <div className="mt-2 flex gap-1">
-                            <input type="text" value={item.notes} onChange={e => updNotes(item.tempId, e.target.value)} placeholder="Ej: sin cebolla..." className="flex-1 rounded-lg border border-border bg-surface-2 px-2 py-1.5 text-xs text-text outline-none focus:border-accent" autoFocus />
-                            <button onClick={() => setEditingNotes(null)} className="btn btn-ghost p-1.5"><X className="h-3.5 w-3.5" /></button>
-                          </div>
-                        )}
-                        {showModifiers === item.tempId && item.menuItemId && (() => {
-                          const prod = products.find(p => p.id === item.menuItemId);
-                          if (!prod?.modifiers?.length) return null;
-                          return (
-                            <div className="mt-2 space-y-1">
-                              {prod.modifiers.map(mod => {
-                                const active = item.modifiers.some(m => m.modifierId === mod.id);
-                                return (
-                                  <button key={mod.id} onClick={() => toggleMod(item.tempId, { modifierId: mod.id, name: mod.name, priceAdjustment: mod.priceAdjustment })}
-                                    className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-xs transition ${active ? "bg-accent/10 text-accent" : "bg-surface-3 text-text-muted"}`}
-                                  ><span>{mod.name}</span>{mod.priceAdjustment > 0 && <span>+${mod.priceAdjustment.toFixed(2)}</span>}</button>
-                                );
-                              })}
+                <div className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2">
+                  <User className="h-4 w-4 text-text-muted" />
+                  <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Nombre cliente" className="flex-1 bg-transparent text-sm text-text outline-none" />
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-3">
+                {cart.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-text-muted">
+                    <ShoppingCart className="mb-2 h-10 w-10 opacity-30" />
+                    <p className="text-sm">Agrega productos</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {cart.map(item => {
+                      const modTotal = item.modifiers.reduce((s: number, m: any) => s + m.priceAdjustment, 0);
+                      const lineTotal = (item.unitPrice + modTotal) * item.quantity;
+                      return (
+                        <div key={item.tempId} className="rounded-lg bg-surface p-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-text">{item.name}</p>
+                              {item.modifiers.length > 0 && (
+                                <div className="mt-0.5 text-xs text-accent">{item.modifiers.map((m: any) => <span key={m.modifierId} className="mr-2">+{m.name}{m.priceAdjustment > 0 && ` ($${m.priceAdjustment.toFixed(2)})`}</span>)}</div>
+                              )}
+                              {item.notes && <p className="mt-0.5 text-xs italic text-warning">📝 {item.notes}</p>}
                             </div>
-                          );
-                        })()}
-                      </div>
-                    );
-                  })}
+                            <span className="text-sm font-bold text-text">${lineTotal.toFixed(2)}</span>
+                          </div>
+                          <div className="mt-2 flex items-center justify-between">
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => updateQty(item.tempId, -1)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-3 text-text-muted"><Minus className="h-3.5 w-3.5" /></button>
+                              <span className="w-8 text-center text-sm font-medium text-text">{item.quantity}</span>
+                              <button onClick={() => updateQty(item.tempId, 1)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-3 text-text-muted"><Plus className="h-3.5 w-3.5" /></button>
+                            </div>
+                            <div className="flex gap-1">
+                              <button onClick={() => setEditingNotes(editingNotes === item.tempId ? null : item.tempId)} className={`btn btn-ghost p-1.5 ${item.notes ? "text-warning" : "text-text-muted"}`}><StickyNote className="h-3.5 w-3.5" /></button>
+                              {item.menuItemId && products.find(p => p.id === item.menuItemId)?.modifiers?.length ? (
+                                <button onClick={() => setShowModifiers(showModifiers === item.tempId ? null : item.tempId)} className="btn btn-ghost p-1.5 text-text-muted"><ChevronDown className="h-3.5 w-3.5" /></button>
+                              ) : null}
+                              <button onClick={() => removeItem(item.tempId)} className="btn btn-ghost p-1.5 text-danger"><Trash2 className="h-3.5 w-3.5" /></button>
+                            </div>
+                          </div>
+                          {editingNotes === item.tempId && (
+                            <div className="mt-2 flex gap-1">
+                              <input type="text" value={item.notes} onChange={e => updNotes(item.tempId, e.target.value)} placeholder="Ej: sin cebolla..." className="flex-1 rounded-lg border border-border bg-surface-2 px-2 py-1.5 text-xs text-text outline-none focus:border-accent" autoFocus />
+                              <button onClick={() => setEditingNotes(null)} className="btn btn-ghost p-1.5"><X className="h-3.5 w-3.5" /></button>
+                            </div>
+                          )}
+                          {showModifiers === item.tempId && item.menuItemId && (() => {
+                            const prod = products.find(p => p.id === item.menuItemId);
+                            if (!prod?.modifiers?.length) return null;
+                            return (
+                              <div className="mt-2 space-y-1">
+                                {prod.modifiers.map((mod: any) => {
+                                  const active = item.modifiers.some((m: any) => m.modifierId === mod.id);
+                                  return (
+                                    <button key={mod.id} onClick={() => toggleMod(item.tempId, { modifierId: mod.id, name: mod.name, priceAdjustment: mod.priceAdjustment })}
+                                      className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-xs transition ${active ? "bg-accent/10 text-accent" : "bg-surface-3 text-text-muted"}`}
+                                    ><span>{mod.name}</span>{mod.priceAdjustment > 0 && <span>+${mod.priceAdjustment.toFixed(2)}</span>}</button>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              {cart.length > 0 && (
+                <div className="border-t border-border p-3">
+                  <div className="mb-3 space-y-1 text-sm">
+                    <div className="flex justify-between text-text-muted"><span>Subtotal</span><span>${totals.subtotal.toFixed(2)}</span></div>
+                    <div className="flex justify-between text-text-muted"><span>IVA 15%</span><span>${totals.tax.toFixed(2)}</span></div>
+                    <div className="flex justify-between text-text-muted"><span>Servicio 10%</span><span>${totals.svc.toFixed(2)}</span></div>
+                    <div className="flex justify-between border-t border-border pt-1 text-base font-bold text-text"><span>TOTAL</span><span className="text-accent">${totals.total.toFixed(2)}</span></div>
+                  </div>
+                  <button onClick={submitWaiterOrder} disabled={submitting || !selectedTable}
+                    className="btn btn-primary w-full gap-2 py-3 text-base">
+                    {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <UtensilsCrossed className="h-5 w-5" />}
+                    Enviar orden a caja
+                  </button>
+                  <button onClick={clearAll} className="btn btn-ghost mt-2 w-full text-sm text-danger">Cancelar</button>
                 </div>
               )}
             </div>
-
-            {/* Totals + Submit */}
-            {cart.length > 0 && (
-              <div className="border-t border-border p-3">
-                <div className="mb-3 space-y-1 text-sm">
-                  <div className="flex justify-between text-text-muted"><span>Subtotal</span><span>${totals.subtotal.toFixed(2)}</span></div>
-                  <div className="flex justify-between text-text-muted"><span>IVA 15%</span><span>${totals.tax.toFixed(2)}</span></div>
-                  <div className="flex justify-between text-text-muted"><span>Servicio 10%</span><span>${totals.svc.toFixed(2)}</span></div>
-                  <div className="flex justify-between border-t border-border pt-1 text-base font-bold text-text"><span>TOTAL</span><span className="text-accent">${totals.total.toFixed(2)}</span></div>
-                </div>
-                <button onClick={submitWaiterOrder} disabled={submitting || !selectedTable}
-                  className="btn btn-primary w-full gap-2 py-3 text-base">
-                  {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <UtensilsCrossed className="h-5 w-5" />}
-                  Enviar orden a caja
-                </button>
-                <button onClick={clearAll} className="btn btn-ghost mt-2 w-full text-sm text-danger">Cancelar</button>
-              </div>
-            )}
           </div>
-        </div>
+        </>
       )}
     </div>
   );
