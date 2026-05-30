@@ -4,6 +4,7 @@ import { usePolling } from "../../hooks/usePolling";
 import * as api from "../../services/api";
 import type { Order, CartItem, Table, MenuItem, Combo, RestaurantSettings, KitchenStation } from "../../types";
 import ProductCard from "../../components/ProductCard";
+import ComboModal from "../../components/ComboModal";
 import EditOrderModal from "../../components/EditOrderModal";
 import {
   LogOut, HandPlatter, RefreshCw, CheckCircle, Clock,
@@ -63,6 +64,7 @@ export default function WaiterPage() {
   const [successOrder, setSuccessOrder] = useState<number | null>(null);
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [showModifiers, setShowModifiers] = useState<string | null>(null);
+  const [showComboModal, setShowComboModal] = useState<Combo | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -93,6 +95,11 @@ export default function WaiterPage() {
     return items;
   })();
 
+  const filteredCombos = (() => {
+    if (!selectedCategory) return combos;
+    return combos.filter(c => c.categoryId === selectedCategory);
+  })();
+
   const addProduct = (product: MenuItem) => {
     const existing = cart.find(c => c.menuItemId === product.id && !c.comboId && c.modifiers.length === 0 && !c.notes);
     if (existing) {
@@ -109,6 +116,23 @@ export default function WaiterPage() {
       notes: "",
       modifiers: [],
     }]);
+  };
+
+  const addComboToCart = (combo: Combo, selections: Record<string, string>, selectionNames: Record<string, string>) => {
+    const kitchens = combo.comboItems.map(ci => ci.menuItem.kitchen);
+    const kitchen: KitchenStation = kitchens.includes("KITCHEN_2") ? "BOTH" : "KITCHEN_1";
+    setCart([...cart, {
+      tempId: crypto.randomUUID(),
+      comboId: combo.id,
+      name: combo.name,
+      quantity: 1,
+      unitPrice: combo.basePrice,
+      kitchen,
+      notes: "",
+      modifiers: [],
+      comboSelections: selectionNames,
+    }]);
+    setShowComboModal(null);
   };
 
   const updateQty = (tempId: string, delta: number) => {
@@ -375,18 +399,39 @@ export default function WaiterPage() {
                 {search && <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted"><X className="h-4 w-4" /></button>}
               </div>
             </div>
-            {/* Products grid — responsive columns */}
+            {/* Products + Combos grid */}
             <div className="flex-1 overflow-y-auto p-2">
               {orderLoading ? (
                 <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-accent" /></div>
               ) : (
-                <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
-                  {filteredProducts.map(p => (
-                    <ProductCard key={p.id} product={p} onAdd={() => addProduct(p)} />
-                  ))}
-                </div>
+                <>
+                  {/* Combos */}
+                  {filteredCombos.length > 0 && (
+                    <div className="mb-3">
+                      <h3 className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-text-muted">Combos</h3>
+                      <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
+                        {filteredCombos.map(combo => (
+                          <button
+                            key={combo.id}
+                            onClick={() => setShowComboModal(combo)}
+                            className="flex flex-col rounded-xl border border-accent/30 bg-accent/5 p-2 text-left transition hover:bg-accent/10 active:scale-[0.98]"
+                          >
+                            <span className="text-xs font-medium text-text leading-tight">{combo.name}</span>
+                            <span className="mt-auto pt-1.5 text-sm font-bold text-accent">${combo.basePrice.toFixed(2)}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {/* Products */}
+                  <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
+                    {filteredProducts.map(p => (
+                      <ProductCard key={p.id} product={p} onAdd={() => addProduct(p)} />
+                    ))}
+                  </div>
+                </>
               )}
-              {!orderLoading && filteredProducts.length === 0 && (
+              {!orderLoading && filteredProducts.length === 0 && filteredCombos.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-16 text-text-muted"><Search className="mb-2 h-8 w-8" /><p>Sin productos</p></div>
               )}
             </div>
@@ -437,13 +482,35 @@ export default function WaiterPage() {
                 {orderLoading ? (
                   <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-accent" /></div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {filteredProducts.map(p => (
-                      <ProductCard key={p.id} product={p} onAdd={() => addProduct(p)} />
-                    ))}
-                  </div>
+                  <>
+                    {/* Combos */}
+                    {filteredCombos.length > 0 && (
+                      <div className="mb-4">
+                        <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-text-muted">Combos</h3>
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                          {filteredCombos.map(combo => (
+                            <button
+                              key={combo.id}
+                              onClick={() => setShowComboModal(combo)}
+                              className="flex flex-col rounded-xl border border-accent/30 bg-accent/5 p-3 text-left transition hover:bg-accent/10 active:scale-[0.98]"
+                            >
+                              <span className="text-sm font-medium text-text">{combo.name}</span>
+                              {combo.description && <span className="mt-0.5 line-clamp-2 text-xs text-text-muted">{combo.description}</span>}
+                              <span className="mt-auto pt-2 text-base font-bold text-accent">${combo.basePrice.toFixed(2)}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* Products */}
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {filteredProducts.map(p => (
+                        <ProductCard key={p.id} product={p} onAdd={() => addProduct(p)} />
+                      ))}
+                    </div>
+                  </>
                 )}
-                {!orderLoading && filteredProducts.length === 0 && (
+                {!orderLoading && filteredProducts.length === 0 && filteredCombos.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-20 text-text-muted"><Search className="mb-2 h-8 w-8" /><p>Sin productos</p></div>
                 )}
               </div>
@@ -547,6 +614,16 @@ export default function WaiterPage() {
             </div>
           </div>
         </>
+      )}
+
+      {/* Combo Modal */}
+      {showComboModal && (
+        <ComboModal
+          combo={showComboModal}
+          products={products}
+          onConfirm={addComboToCart}
+          onClose={() => setShowComboModal(null)}
+        />
       )}
 
       {/* Edit Order Modal — for pending orders */}
