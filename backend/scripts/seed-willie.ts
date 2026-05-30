@@ -27,7 +27,7 @@ async function main() {
   // ─── 2. Willie's — detect state ───────────────────────────
   const existing = await prisma.restaurant.findUnique({
     where: { slug: "willie" },
-    include: { menuItems: { take: 1 }, comboItems: { take: 1 } },
+    include: { menuItems: { take: 1 } },
   });
 
   if (existing && existing.menuItems.length > 0) {
