@@ -4,29 +4,20 @@ import bcrypt from "bcrypt";
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🌱 Seeding Comanda...");
+  const existing = await prisma.restaurant.findUnique({
+    where: { slug: "el-sabor-criollo" },
+    include: { menuItems: { take: 1 } },
+  });
+  if (existing && existing.menuItems.length > 0) {
+    console.log("⏭️  El Sabor Criollo already complete — skipping");
+    return;
+  }
+  if (existing) {
+    console.log("🧹 El Sabor Criollo incomplete — recreating...");
+    await prisma.restaurant.delete({ where: { slug: "el-sabor-criollo" } });
+  }
 
-  // Clean existing data (dev only)
-  await prisma.$transaction([
-    prisma.deliveryOrder.deleteMany(),
-    prisma.orderItem.deleteMany(),
-    prisma.order.deleteMany(),
-    prisma.comboItem.deleteMany(),
-    prisma.modifier.deleteMany(),
-    prisma.combo.deleteMany(),
-    prisma.menuItem.deleteMany(),
-    prisma.category.deleteMany(),
-    prisma.cashRegister.deleteMany(),
-    prisma.expense.deleteMany(),
-    prisma.inventory.deleteMany(),
-    prisma.supplier.deleteMany(),
-    prisma.customer.deleteMany(),
-    prisma.deliveryZone.deleteMany(),
-    prisma.table.deleteMany(),
-    prisma.subscription.deleteMany(),
-    prisma.user.deleteMany(),
-    prisma.restaurant.deleteMany(),
-  ]);
+  console.log("🌱 Seeding El Sabor Criollo...");
 
   const hash = (pw: string) => bcrypt.hashSync(pw, 10);
 
