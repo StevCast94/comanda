@@ -3,7 +3,7 @@
     "buildCommand": "cd backend && npm install && npx prisma generate"
   },
   "deploy": {
-    "startCommand": "cd backend && npx prisma migrate deploy && npx tsx scripts/migrate-custom-type.ts && npx tsx scripts/migrate-kitchen.ts && npx tsx scripts/reset-passwords.ts && npx tsx scripts/clean-data.ts && npx tsx src/seed.ts && npx tsx scripts/seed-willie.ts && npx tsx src/index.ts",
+    "startCommand": "cd backend && npx prisma migrate deploy && npx tsx scripts/migrate-custom-type.ts && npx tsx scripts/migrate-kitchen.ts && npx tsx scripts/reset-passwords.ts && npx tsx scripts/seed-willie.ts && npx tsx src/index.ts",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   }
