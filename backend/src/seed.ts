@@ -8,12 +8,12 @@ async function main() {
     where: { slug: "el-sabor-criollo" },
     include: { menuItems: { take: 1 } },
   });
-  if (existing && existing.menuItems.length > 0) {
+  if (existing && existing.menuItems.length > 0 && process.env.FORCE_RESEED !== "true") {
     console.log("⏭️  El Sabor Criollo already complete — skipping");
     return;
   }
   if (existing) {
-    console.log("🧹 El Sabor Criollo incomplete — recreating...");
+    console.log("🧹 El Sabor Criollo exists — recreating...");
     await prisma.restaurant.delete({ where: { slug: "el-sabor-criollo" } });
   }
 

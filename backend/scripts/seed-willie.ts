@@ -12,7 +12,7 @@ async function main() {
     include: { menuItems: { take: 1 } },
   });
   if (existing) {
-    if (existing.menuItems.length > 0) {
+    if (existing.menuItems.length > 0 && process.env.FORCE_RESEED !== "true") {
       console.log("⏭️  Willie's already complete — skipping");
       return;
     }
