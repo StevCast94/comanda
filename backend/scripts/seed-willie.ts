@@ -7,10 +7,18 @@ import bcrypt from "bcrypt";
 const prisma = new PrismaClient();
 
 async function main() {
-  const existing = await prisma.restaurant.findUnique({ where: { slug: "willie" } });
+  const existing = await prisma.restaurant.findUnique({ 
+    where: { slug: "willie" },
+    include: { menuItems: { take: 1 } },
+  });
   if (existing) {
-    console.log("⏭️  Willie's already exists — skipping");
-    return;
+    if (existing.menuItems.length > 0) {
+      console.log("⏭️  Willie's already complete — skipping");
+      return;
+    }
+    // Partial — delete and recreate
+    console.log("🧹 Willie's incomplete — recreating...");
+    await prisma.restaurant.delete({ where: { slug: "willie" } });
   }
 
   console.log("🍽️  Seeding Willie's...");
