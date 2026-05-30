@@ -189,6 +189,8 @@ export const orders = {
     method: "PATCH",
     body: JSON.stringify({ items }),
   }),
+
+  delete: (id: string) => request<{ message: string }>(`/orders/${id}`, { method: "DELETE" }),
 };
 
 // ─── Kitchen ────────────────────────────────────────────────

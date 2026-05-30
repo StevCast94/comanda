@@ -404,7 +404,33 @@ ordRouter.patch("/:id/items", ordAuthz("CASHIER", "ADMIN", "WAITER"), async (req
   }
 });
 
-export { ordRouter as default };
+// DELETE /api/orders/:id — ADMIN only, hard delete
+ordRouter.delete("/:id", ordAuthz("ADMIN"), async (req: OrdReq, res: OrdRes) => {
+  try {
+    const order = await ordPrisma.order.findUnique({
+      where: { id: req.params.id as string },
+      select: { id: true, restaurantId: true },
+    });
+    if (!order) {
+      res.status(404).json({ error: "Orden no encontrada" });
+      return;
+    }
+    if (order.restaurantId !== req.restaurantId) {
+      res.status(403).json({ error: "Sin acceso" });
+      return;
+    }
 
+    await ordPrisma.order.delete({
+      where: { id: req.params.id as string },
+    });
+
+    res.json({ message: "Orden eliminada" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error eliminando orden" });
+  }
+});
+
+export { ordRouter as default };
 
 

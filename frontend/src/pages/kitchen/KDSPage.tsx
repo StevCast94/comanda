@@ -14,14 +14,14 @@ const TIME_GREEN = 3;
 const TIME_YELLOW = 6;
 
 function getTimeColor(minutes: number): string {
-  if (minutes < TIME_GREEN) return "text-accent border-accent/30 bg-accent/5";
-  if (minutes < TIME_YELLOW) return "text-warning border-warning/30 bg-warning/5";
-  return "text-danger border-danger/30 bg-danger/5";
+  if (minutes < 3) return "border-success/30 bg-success/5";
+  if (minutes < 6) return "border-warning/30 bg-warning/5";
+  return "border-danger/30 bg-danger/5";
 }
 
 function getTimeBg(minutes: number): string {
-  if (minutes < TIME_GREEN) return "bg-accent";
-  if (minutes < TIME_YELLOW) return "bg-warning";
+  if (minutes < 3) return "bg-success";
+  if (minutes < 6) return "bg-warning";
   return "bg-danger";
 }
 
@@ -180,7 +180,7 @@ export default function KDSPage() {
                         <button
                           onClick={() => handleUpdateStatus(item.id, "PREPARING")}
                           disabled={updatingItem === item.id}
-                          className="btn shrink-0 gap-1 bg-info px-3 py-2 text-sm text-white hover:opacity-90"
+                          className="btn shrink-0 gap-1 bg-blue-600 px-3 py-2 text-sm text-white hover:opacity-90"
                         >
                           {updatingItem === item.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -193,7 +193,7 @@ export default function KDSPage() {
                         <button
                           onClick={() => handleUpdateStatus(item.id, "READY")}
                           disabled={updatingItem === item.id}
-                          className="btn shrink-0 gap-1 bg-accent px-3 py-2 text-sm text-white hover:opacity-90"
+                          className="btn shrink-0 gap-1 bg-warning px-3 py-2 text-sm text-white hover:opacity-90"
                         >
                           {updatingItem === item.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -203,7 +203,7 @@ export default function KDSPage() {
                           Listo ✓
                         </button>
                       ) : (
-                        <span className="rounded-lg bg-accent/10 px-3 py-2 text-sm text-accent">✓ Listo</span>
+                        <span className="rounded-lg bg-success/10 px-3 py-2 text-sm text-success">✓ Listo</span>
                       )}
                     </div>
                   ))}

@@ -8,12 +8,15 @@
   --color-surface-3: #e9ecef;
   --color-border: #dee2e6;
   --color-text: #212529;
-  --color-text-muted: #6c757d;
+  --color-text-muted: #6b7280;
   --color-accent: #dc2626;
   --color-accent-hover: #b91c1c;
+  --color-success: #16a34a;
   --color-warning: #f97316;
+  --color-info: #2563eb;
   --color-danger: #dc2626;
-  --color-info: #f97316;
+  --color-purple: #7c3aed;
+  --color-neutral: #6b7280;
 }
 
 /* ─── Base ───────────────────────────────────────────────── */
@@ -96,15 +99,33 @@ html, body, #root {
 /* ─── Pulse animation for new orders ─────────────────────── */
 
 @keyframes pulse-border {
-  0%, 100% { border-color: var(--color-accent); }
+  0%, 100% { border-color: var(--color-success); }
   50% { border-color: transparent; }
 }
 .pulse-new {
   animation: pulse-border 1.5s ease-in-out 3;
 }
 
-/* ─── accent/10s, accent/20s, etc for red tones ──────────── */
+/* ─── Color mix utilities for new tokens ─────────────────── */
 
-.bg-accent\/10 { background-color: color-mix(in srgb, var(--color-accent) 10%, transparent); }
-.bg-accent\/20 { background-color: color-mix(in srgb, var(--color-accent) 20%, transparent); }
-.bg-accent\/5 { background-color: color-mix(in srgb, var(--color-accent) 5%, transparent); }
+.bg-success\/5   { background-color: color-mix(in srgb, var(--color-success) 5%, transparent); }
+.bg-success\/10  { background-color: color-mix(in srgb, var(--color-success) 10%, transparent); }
+.bg-success\/20  { background-color: color-mix(in srgb, var(--color-success) 20%, transparent); }
+.bg-info\/5      { background-color: color-mix(in srgb, var(--color-info) 5%, transparent); }
+.bg-info\/10     { background-color: color-mix(in srgb, var(--color-info) 10%, transparent); }
+.bg-warning\/5   { background-color: color-mix(in srgb, var(--color-warning) 5%, transparent); }
+.bg-warning\/10  { background-color: color-mix(in srgb, var(--color-warning) 10%, transparent); }
+.bg-warning\/20  { background-color: color-mix(in srgb, var(--color-warning) 20%, transparent); }
+.bg-accent\/10   { background-color: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+.bg-accent\/20   { background-color: color-mix(in srgb, var(--color-accent) 20%, transparent); }
+.bg-accent\/5    { background-color: color-mix(in srgb, var(--color-accent) 5%, transparent); }
+.bg-neutral\/5   { background-color: color-mix(in srgb, var(--color-neutral) 5%, transparent); }
+.bg-danger\/5    { background-color: color-mix(in srgb, var(--color-danger) 5%, transparent); }
+.bg-danger\/10   { background-color: color-mix(in srgb, var(--color-danger) 10%, transparent); }
+
+/* ─── Purple combos for status use ──────────────────────── */
+.bg-purple-500\/5   { background-color: color-mix(in srgb, #7c3aed 5%, transparent); }
+.bg-purple-500\/10  { background-color: color-mix(in srgb, #7c3aed 10%, transparent); }
+.bg-purple-500\/20  { background-color: color-mix(in srgb, #7c3aed 20%, transparent); }
+.text-purple  { color: var(--color-purple); }
+.text-purple-400 { color: #a78bfa; }

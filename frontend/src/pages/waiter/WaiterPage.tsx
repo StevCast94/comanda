@@ -206,7 +206,7 @@ export default function WaiterPage() {
         </div>
         <div className="flex items-center gap-2">
           {tab === "entregar" && (
-            <span className="rounded-full bg-accent/10 px-3 py-1 text-sm font-bold text-accent">
+            <span className="rounded-full bg-success/10 px-3 py-1 text-sm font-bold text-accent">
               {readyOrders.length} lista{readyOrders.length !== 1 ? "s" : ""}
             </span>
           )}
@@ -242,7 +242,7 @@ export default function WaiterPage() {
 
       {/* Success toast */}
       {justDelivered && (
-        <div className="flex items-center justify-center gap-2 bg-accent/10 py-2 text-sm text-accent">
+        <div className="flex items-center justify-center gap-2 bg-success/10 py-2 text-sm text-accent">
           <CheckCircle className="h-4 w-4" />
           Orden #{justDelivered} entregada
         </div>
@@ -294,8 +294,8 @@ export default function WaiterPage() {
             {readyOrders.map((order) => {
               const mins = minutesAgo((order as any).updatedAt || order.createdAt);
               return (
-                <div key={order.id} className="rounded-xl border border-accent/30 bg-surface-2 overflow-hidden">
-                  <div className="flex items-center justify-between bg-accent/10 px-4 py-2">
+                <div key={order.id} className="rounded-xl border border-success/30 bg-surface-2 overflow-hidden">
+                  <div className="flex items-center justify-between bg-success/10 px-4 py-2">
                     <div className="flex items-center gap-2">
                       <span className="text-lg font-bold text-accent">#{order.orderNumber}</span>
                       {order.table && (
@@ -515,7 +515,7 @@ export default function WaiterPage() {
                                   const active = item.modifiers.some((m: any) => m.modifierId === mod.id);
                                   return (
                                     <button key={mod.id} onClick={() => toggleMod(item.tempId, { modifierId: mod.id, name: mod.name, priceAdjustment: mod.priceAdjustment })}
-                                      className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-xs transition ${active ? "bg-accent/10 text-accent" : "bg-surface-3 text-text-muted"}`}
+                                      className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-xs transition ${active ? "bg-success/10 text-accent" : "bg-surface-3 text-text-muted"}`}
                                     ><span>{mod.name}</span>{mod.priceAdjustment > 0 && <span>+${mod.priceAdjustment.toFixed(2)}</span>}</button>
                                   );
                                 })}

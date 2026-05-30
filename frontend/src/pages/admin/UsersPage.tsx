@@ -13,10 +13,10 @@ interface UserRow {
 
 const ROLES = [
   { value: "CASHIER", label: "Cajero/a", color: "bg-blue-500/10 text-blue-400" },
-  { value: "COOK_1", label: "Cocina 1", color: "bg-orange-500/10 text-orange-400" },
-  { value: "COOK_2", label: "Cocina 2", color: "bg-amber-500/10 text-amber-400" },
+  { value: "COOK_1", label: "Cocina", color: "bg-orange-500/10 text-orange-400" },
+  { value: "COOK_2", label: "Parrilla", color: "bg-orange-500/10 text-orange-400" },
   { value: "WAITER", label: "Mesero/a", color: "bg-green-500/10 text-green-400" },
-  { value: "DELIVERY", label: "Delivery", color: "bg-purple-500/10 text-purple-400" },
+  { value: "DELIVERY", label: "Delivery", color: "bg-indigo-500/10 text-indigo-400" },
   { value: "ADMIN", label: "Admin", color: "bg-red-500/10 text-red-400" },
 ];
 
