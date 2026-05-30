@@ -318,6 +318,24 @@ export const superadmin = {
       method: "PUT",
       body: JSON.stringify({ plan }),
     }),
+
+  updateRestaurant: (id: string, data: { name?: string; slug?: string; type?: string; address?: string; phone?: string }) =>
+    request<any>(`/superadmin/restaurants/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  deleteRestaurant: (id: string) =>
+    request<any>(`/superadmin/restaurants/${id}`, { method: "DELETE" }),
+
+  updateAdmin: (restaurantId: string, data: { username?: string; password?: string; name?: string }) =>
+    request<any>(`/superadmin/restaurants/${restaurantId}/admin`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  getRestaurant: (id: string) =>
+    request<{ restaurant: any }>(`/superadmin/restaurants/${id}`),
 };
 
 export default { auth, register, categories, products, combos, orders, kitchen, waiter, cashRegister, settings, reports, superadmin };

@@ -230,3 +230,81 @@ saRouter.put("/subscriptions/:id", async (req: SAReq, res: SARes) => {
 });
 
 export { saRouter as default };
+
+
+// PATCH /api/superadmin/restaurants/:id — Edit restaurant details
+saRouter.patch("/restaurants/:id", async (req: SAReq, res: SARes) => {
+  try {
+    const { name, slug, type, address, phone } = req.body;
+    const data: Record<string, unknown> = {};
+    if (name !== undefined) data.name = name;
+    if (slug !== undefined) data.slug = slug;
+    if (type !== undefined) data.type = type;
+    if (address !== undefined) data.address = address;
+    if (phone !== undefined) data.phone = phone;
+
+    if (slug) {
+      const existing = await saPrisma.restaurant.findFirst({
+        where: { slug: slug as string, id: { not: req.params.id as string } },
+      });
+      if (existing) { res.status(409).json({ error: "Slug ya en uso" }); return; }
+    }
+
+    const restaurant = await saPrisma.restaurant.update({
+      where: { id: req.params.id as string },
+      data,
+    });
+    res.json({ restaurant });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error editando restaurante" });
+  }
+});
+
+// DELETE /api/superadmin/restaurants/:id — Hard delete
+saRouter.delete("/restaurants/:id", async (req: SAReq, res: SARes) => {
+  try {
+    await saPrisma.restaurant.delete({
+      where: { id: req.params.id as string },
+    });
+    res.json({ message: "Restaurante eliminado" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error eliminando restaurante" });
+  }
+});
+
+// PATCH /api/superadmin/restaurants/:id/admin — Reset admin credentials
+saRouter.patch("/restaurants/:id/admin", async (req: SAReq, res: SARes) => {
+  try {
+    const { username, password, name } = req.body;
+    const restaurant = await saPrisma.restaurant.findUnique({
+      where: { id: req.params.id as string },
+      select: { id: true },
+    });
+    if (!restaurant) { res.status(404).json({ error: "Restaurante no encontrado" }); return; }
+
+    const admin = await saPrisma.user.findFirst({
+      where: { restaurantId: restaurant.id, role: "ADMIN" },
+    });
+    if (!admin) { res.status(404).json({ error: "Admin no encontrado" }); return; }
+
+    const updates: Record<string, unknown> = {};
+    if (name) updates.name = name;
+    if (username) updates.username = username;
+    if (password) {
+      const hash = await bcrypt.hash(password, 10);
+      updates.password = hash;
+    }
+
+    const updated = await saPrisma.user.update({
+      where: { id: admin.id },
+      data: updates,
+      select: { id: true, name: true, username: true, email: true },
+    });
+    res.json({ admin: updated });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error actualizando admin" });
+  }
+});

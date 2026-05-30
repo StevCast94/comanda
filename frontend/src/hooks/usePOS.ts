@@ -84,6 +84,14 @@ export function usePOS() {
       }
     }
     load();
+    // Poll cash register balance in real time
+    const timer = setInterval(async () => {
+      try {
+        const { register } = await api.cashRegister.current();
+        setState((s) => ({ ...s, cashRegister: register }));
+      } catch { /* ignore */ }
+    }, 8000);
+    return () => clearInterval(timer);
   }, []);
 
   // ─── Filtered products by category and search ─────────────
