@@ -35,6 +35,10 @@ async function main() {
       updates.name = su.name;
       nameFixed++;
     }
+    if (!user.active) {
+      updates.active = true;
+      nameFixed++;
+    }
 
     const already = await bcrypt.compare("12345678", user.password);
     if (!already) {
