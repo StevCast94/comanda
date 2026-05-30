@@ -18,9 +18,9 @@ const KITCHEN_OPTIONS = [
 ];
 
 const TYPE_OPTIONS = [
-  { value: "MAIN", label: "Principal" },
+  { value: "MAIN", label: "Plato principal" },
   { value: "PROTEIN", label: "Proteína" },
-  { value: "SIDE", label: "Acompañante" },
+  { value: "SIDE", label: "Guarnición" },
   { value: "DRINK", label: "Bebida" },
   { value: "DESSERT", label: "Postre" },
 ];
@@ -45,15 +45,6 @@ const DAYS = [
   { i: 4, label: "Jue", short: "J" },
   { i: 5, label: "Vie", short: "V" },
   { i: 6, label: "Sáb", short: "S" },
-];
-
-const COMBO_TYPES = [
-  { value: "BREAKFAST", label: "Desayuno" },
-  { value: "LUNCH", label: "Almuerzo" },
-  { value: "DINNER", label: "Cena" },
-  { value: "SNACK", label: "Snack" },
-  { value: "ASADO", label: "Asado" },
-  { value: "CUSTOM", label: "Personalizado" },
 ];
 
 export default function MenuPage() {
@@ -228,7 +219,7 @@ function ProductsTab({ products, categories, onRefresh }: {
           <Input label="Descripción" value={form.description} onChange={(v) => setForm({ ...form, description: v })} />
           <Input label="Precio base ($) *" type="number" value={String(form.basePrice)} onChange={(v) => setForm({ ...form, basePrice: Number(v) })} />
           <Select label="Categoría *" value={form.categoryId} onChange={(v) => setForm({ ...form, categoryId: v })} options={categories.map((c) => ({ value: c.id, label: c.name }))} />
-          <Select label="Tipo" value={form.type} onChange={(v) => setForm({ ...form, type: v })} options={TYPE_OPTIONS} />
+          <Select label="Función en el plato" value={form.type} onChange={(v) => setForm({ ...form, type: v })} options={TYPE_OPTIONS} />
           <Input label="Tipo personalizado" value={form.customType} onChange={(v) => setForm({ ...form, customType: v })} placeholder="Ej: Vegano, Sin gluten..." />
           <Select label="Cocina" value={form.kitchen} onChange={(v) => setForm({ ...form, kitchen: v })} options={KITCHEN_OPTIONS} />
           <Input label="Tiempo prep. (min)" type="number" value={String(form.prepTime)} onChange={(v) => setForm({ ...form, prepTime: Number(v) })} />
@@ -407,7 +398,7 @@ function CombosTab({ combos, categories, products, onRefresh }: {
   const [error, setError] = useState<string | null>(null);
 
   const [form, setForm] = useState({
-    name: "", description: "", basePrice: 0, categoryId: "", type: "LUNCH" as string,
+    name: "", description: "", basePrice: 0, categoryId: "",
     availableDays: [0, 1, 2, 3, 4, 5, 6],
   });
   const [items, setItems] = useState<Array<{
@@ -415,13 +406,16 @@ function CombosTab({ combos, categories, products, onRefresh }: {
     alternatives: string[];
   }>>([]);
 
-  // Existing group names from all combos
-  const existingGroups = [...new Set(combos.flatMap(c => c.comboItems.map(ci => ci.groupName)).filter(Boolean))].sort();
+  // Build group options: category names + existing groupNames
+  const groupOptions = [...new Set([
+    ...categories.map(c => c.name),
+    ...combos.flatMap(c => c.comboItems.map(ci => ci.groupName)).filter(Boolean) as string[],
+  ])].sort();
 
   function openNew() {
     setForm({
       name: "", description: "", basePrice: 0, categoryId: categories[0]?.id || "",
-      type: "LUNCH", availableDays: [0, 1, 2, 3, 4, 5, 6],
+      availableDays: [0, 1, 2, 3, 4, 5, 6],
     });
     setItems([]);
     setEditing("new"); setError(null);
@@ -430,7 +424,7 @@ function CombosTab({ combos, categories, products, onRefresh }: {
   function openEdit(c: Combo) {
     setForm({
       name: c.name, description: c.description || "", basePrice: c.basePrice,
-      categoryId: c.categoryId, type: c.type,
+      categoryId: c.categoryId,
       availableDays: c.availableDays?.length ? c.availableDays : [0, 1, 2, 3, 4, 5, 6],
     });
     setItems(c.comboItems.map((ci) => ({
@@ -454,10 +448,14 @@ function CombosTab({ combos, categories, products, onRefresh }: {
   function updateItem(i: number, field: string, value: unknown) {
     const n = [...items];
     (n[i] as any)[field] = value;
+    if (field === "isOptional" && !value) {
+      // If changed from optional to required, ensure isDefault stays true
+      n[i].isDefault = true;
+    }
     if (field === "groupName") {
-      // Smart filter: if group matches a category name, auto-filter products
+      // Smart filter: if group matches a category name, lock products to that category
       const matches = categories.find(cat => cat.name.toLowerCase() === (value as string).toLowerCase());
-      if (matches && products[0]) {
+      if (matches) {
         const catProducts = products.filter(p => p.categoryId === matches.id);
         if (catProducts.length > 0) {
           n[i].menuItemId = catProducts[0].id;
@@ -470,9 +468,12 @@ function CombosTab({ combos, categories, products, onRefresh }: {
   async function handleSave() {
     setSaving(true); setError(null);
     try {
+      const cat = categories.find(c => c.id === form.categoryId);
       const data = {
-        ...form, basePrice: Number(form.basePrice),
-        description: form.description || null,
+        name: form.name, description: form.description || null,
+        basePrice: Number(form.basePrice), categoryId: form.categoryId,
+        type: cat?.type || "CUSTOM",
+        availableDays: form.availableDays,
         items: items.map((i) => ({ ...i, quantity: 1 })),
       };
       if (editing === "new") await api.combos.create(data);
@@ -492,7 +493,7 @@ function CombosTab({ combos, categories, products, onRefresh }: {
     setForm({ ...form, availableDays: current.includes(day) ? current.filter(d => d !== day) : [...current, day].sort() });
   }
 
-  // Get filtered products for a specific group (smart filter)
+  // Forced filter: if group matches category, return only that category's products
   function getFilteredProducts(groupName: string): MenuItem[] {
     if (!groupName) return products;
     const cat = categories.find(c => c.name.toLowerCase() === groupName.toLowerCase());
@@ -513,8 +514,7 @@ function CombosTab({ combos, categories, products, onRefresh }: {
           <Input label="Descripción" value={form.description} onChange={(v) => setForm({ ...form, description: v })} />
           <Input label="Precio base ($) *" type="number" value={String(form.basePrice)} onChange={(v) => setForm({ ...form, basePrice: Number(v) })} />
           <Select label="Categoría *" value={form.categoryId} onChange={(v) => setForm({ ...form, categoryId: v })}
-            options={categories.map((c) => ({ value: c.id, label: c.name }))} />
-          <Select label="Tipo" value={form.type} onChange={(v) => setForm({ ...form, type: v })} options={COMBO_TYPES} />
+            options={categories.map((c) => ({ value: c.id, label: `${c.name} → tipo: ${(CAT_TYPES[c.type] || CAT_TYPES.A_LA_CARTE).label}` }))} />
 
           {/* Available Days */}
           <div>
@@ -545,39 +545,64 @@ function CombosTab({ combos, categories, products, onRefresh }: {
           <div className="space-y-2">
             {items.map((item, i) => (
               <div key={i} className="rounded-lg bg-surface p-3 space-y-2">
-                <div className="flex items-center gap-2">
-                  {/* Group name: combobox with autocomplete */}
-                  <div className="relative w-36">
-                    <input
-                      value={item.groupName}
-                      onChange={(e) => updateItem(i, "groupName", e.target.value)}
-                      placeholder="Grupo"
-                      list={`groups-list-${i}`}
-                      className="w-full rounded-lg border border-border bg-surface-2 px-2 py-1.5 text-xs text-text outline-none focus:border-accent"
-                    />
-                    <datalist id={`groups-list-${i}`}>
-                      {existingGroups.map(g => <option key={g} value={g || ""} />)}
-                    </datalist>
-                  </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Group: select from categories + existing groups */}
+                  <select
+                    value={item.groupName}
+                    onChange={(e) => updateItem(i, "groupName", e.target.value)}
+                    className="w-36 rounded-lg border border-border bg-surface-2 px-2 py-1.5 text-xs text-text outline-none focus:border-accent"
+                  >
+                    <option value="">Sin grupo</option>
+                    <optgroup label="Por categoría">
+                      {categories.map(c => (
+                        <option key={`cat-${c.id}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                    {groupOptions.filter(g => !categories.some(c => c.name === g)).length > 0 && (
+                      <optgroup label="Personalizados">
+                        {groupOptions.filter(g => !categories.some(c => c.name === g)).map(g => (
+                          <option key={`grp-${g}`} value={g || ""}>{g}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
 
-                  {/* Product selector — filtered by group */}
+                  {/* Product selector — filtered & locked to group category */}
                   <select
                     value={item.menuItemId}
                     onChange={(e) => updateItem(i, "menuItemId", e.target.value)}
-                    className="flex-1 rounded-lg border border-border bg-surface-2 px-2 py-1.5 text-xs text-text outline-none"
+                    className="flex-1 min-w-[180px] rounded-lg border border-border bg-surface-2 px-2 py-1.5 text-xs text-text outline-none"
                   >
                     {getFilteredProducts(item.groupName).map((p) => (
                       <option key={p.id} value={p.id}>{p.name} (${p.basePrice.toFixed(2)})</option>
                     ))}
                   </select>
 
-                  <label className="flex items-center gap-1 text-[10px] text-text-muted cursor-pointer whitespace-nowrap">
-                    <input type="checkbox" checked={item.isOptional}
-                      onChange={(e) => updateItem(i, "isOptional", e.target.checked)} />
-                    Opcional
-                  </label>
+                  {/* Opcional checkbox + isDefault */}
+                  <div className="flex flex-col gap-0.5">
+                    <label className="flex items-center gap-1 text-[10px] text-text-muted cursor-pointer whitespace-nowrap" title="Permite al cliente quitar o agregar este ítem">
+                      <input type="checkbox" checked={item.isOptional}
+                        onChange={(e) => updateItem(i, "isOptional", e.target.checked)} />
+                      Opcional
+                    </label>
+                    {item.isOptional && (
+                      <label className="flex items-center gap-1 text-[10px] text-text-muted cursor-pointer whitespace-nowrap ml-4" title="Si está marcado, el ítem viene incluido por defecto. El cliente puede quitarlo.">
+                        <input type="checkbox" checked={item.isDefault}
+                          onChange={(e) => updateItem(i, "isDefault", e.target.checked)} />
+                        Incluido por defecto
+                      </label>
+                    )}
+                  </div>
+
                   <button onClick={() => setItems(items.filter((_, j) => j !== i))} className="text-danger"><X className="h-4 w-4" /></button>
                 </div>
+
+                {/* Help text */}
+                {item.isOptional && (
+                  <p className="text-[10px] text-text-muted ml-1">
+                    {item.isDefault ? "✅ Viene incluido — el cliente puede quitarlo" : "⬜ No incluido — el cliente puede agregarlo"}
+                  </p>
+                )}
               </div>
             ))}
           </div>
@@ -601,7 +626,8 @@ function CombosTab({ combos, categories, products, onRefresh }: {
                       <div className="flex items-center gap-1.5">
                         <span className="text-accent font-medium">{item.groupName || "Item"}:</span>
                         <span className="text-text">{p?.name || "—"}</span>
-                        {item.isOptional && <span className="text-[10px] text-text-muted">(opcional)</span>}
+                        {item.isOptional && item.isDefault && <span className="text-[10px] text-success">(incluido)</span>}
+                        {item.isOptional && !item.isDefault && <span className="text-[10px] text-text-muted">(opcional)</span>}
                       </div>
                     </div>
                   );
