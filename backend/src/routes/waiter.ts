@@ -6,14 +6,17 @@ import { tenantIsolation as waitTenant } from "../middleware/tenant";
 const waitRouter = WaitRouter();
 waitRouter.use(waitAuth, waitTenant);
 
-// GET /api/waiter/pending — Orders ready for delivery
+// GET /api/waiter/pending?orderType=DINE_IN,TAKEAWAY — Orders ready for delivery
 waitRouter.get("/pending", waitAuthz("WAITER", "ADMIN"), async (req: WaitReq, res: WaitRes) => {
   try {
+    const orderTypeParam = req.query.orderType as string;
+    const orderTypes = orderTypeParam ? orderTypeParam.split(",") : ["DINE_IN", "TAKEAWAY"];
+
     const orders = await waitPrisma.order.findMany({
       where: {
         restaurantId: req.restaurantId!,
         status: "READY",
-        orderType: "DINE_IN",
+        orderType: { in: orderTypes as any },
       },
       include: {
         items: {

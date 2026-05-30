@@ -42,11 +42,9 @@ export default function KDSPage() {
   const prevCountRef = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const kitchenStation = user?.role === "COOK_1" ? "KITCHEN_1" : "KITCHEN_2";
-  const kitchenLabel = user?.role === "COOK_1" ? "Cocina 1 — Acompañantes" : "Cocina 2 — Proteína";
-
+  // Unified KDS — all kitchen items in one screen
   const { data, error, loading, refresh } = usePolling(
-    () => api.kitchen.orders(kitchenStation, "PENDING,PREPARING"),
+    () => api.kitchen.orders(undefined, "PENDING,PREPARING"),
     { interval: 5000 }
   );
 
@@ -95,7 +93,7 @@ export default function KDSPage() {
       <header className="flex items-center justify-between border-b border-border bg-surface-2 px-4 py-3">
         <div className="flex items-center gap-3">
           <ChefHat className="h-6 w-6 text-accent" />
-          <h1 className="text-lg font-bold text-text">{kitchenLabel}</h1>
+          <h1 className="text-lg font-bold text-text">Cocina</h1>
           {error ? (
             <WifiOff className="h-4 w-4 text-danger" />
           ) : (

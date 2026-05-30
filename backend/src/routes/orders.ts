@@ -300,9 +300,9 @@ ordRouter.patch("/:id/confirm-payment", ordAuthz("CASHIER", "ADMIN"), async (req
       },
     });
 
-    // If ALL items have kitchen NONE (bebidas, postres), auto-advance to READY
-    const allItemsNone = updated.items.length > 0 && updated.items.every((item: any) => item.kitchen === "NONE");
-    if (allItemsNone) {
+    // If ALL items have kitchen NONE or BAR (bebidas, postres), auto-advance to READY
+    const allItemsNoKitchen = updated.items.length > 0 && updated.items.every((item: any) => item.kitchen === "NONE" || item.kitchen === "BAR");
+    if (allItemsNoKitchen) {
       await ordPrisma.orderItem.updateMany({
         where: { orderId: updated.id },
         data: { status: "READY", readyAt: new Date() },
@@ -325,7 +325,7 @@ ordRouter.patch("/:id/confirm-payment", ordAuthz("CASHIER", "ADMIN"), async (req
       },
     });
 
-    res.json({ order: allItemsNone ? finalOrder : updated });
+    res.json({ order: updated });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Error confirmando pago" });
