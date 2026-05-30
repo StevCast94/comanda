@@ -465,6 +465,12 @@ function CombosTab({ combos, categories, products, onRefresh }: {
     setItems(n);
   }
 
+  // Map CategoryType → ComboType (not all CategoryTypes are valid ComboTypes)
+  const COMBO_TYPE_MAP: Record<string, string> = {
+    BREAKFAST: "BREAKFAST", LUNCH: "LUNCH", DINNER: "DINNER",
+    SNACK: "SNACK", ASADO: "ASADO",
+  };
+
   async function handleSave() {
     setSaving(true); setError(null);
     try {
@@ -472,7 +478,7 @@ function CombosTab({ combos, categories, products, onRefresh }: {
       const data = {
         name: form.name, description: form.description || null,
         basePrice: Number(form.basePrice), categoryId: form.categoryId,
-        type: cat?.type || "CUSTOM",
+        type: COMBO_TYPE_MAP[cat?.type || ""] || "CUSTOM",
         availableDays: form.availableDays,
         items: items.map((i) => ({ ...i, quantity: 1 })),
       };
