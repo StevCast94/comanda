@@ -76,8 +76,7 @@ router.delete("/tables/:id", authorize("ADMIN", "SUPERADMIN"), async (req: Reque
   }
 });
 
-// PATCH /api/restaurant/info
-auth: ADMIN, SUPERADMIN
+// PATCH /api/restaurant/info — admin + superadmin
 router.patch("/info", authorize("ADMIN", "SUPERADMIN"), async (req: Request, res: Response) => {
   const restaurantId = req.restaurantId!;
   try {
