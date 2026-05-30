@@ -36,10 +36,10 @@ async function request<T>(path: string, opts: RequestInit = {}): Promise<T> {
 // ─── Auth ───────────────────────────────────────────────────
 
 export const auth = {
-  login: (email: string, password: string) =>
+  login: (username: string, password: string) =>
     request<{ token: string; user: import("../types").User }>("/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ username, password }),
     }),
 
   me: () => request<{ user: import("../types").User }>("/auth/me"),

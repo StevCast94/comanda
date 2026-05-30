@@ -69,56 +69,56 @@ async function main() {
     prisma.user.create({
       data: {
         email: "superadmin@comanda.app", username: "superadmin",
-        password: hash("Admin123!"), name: "Super Admin", role: UserRole.SUPERADMIN,
+        password: hash("12345678"), name: "Super Admin", role: UserRole.SUPERADMIN,
         restaurantId: null,
       },
     }),
     prisma.user.create({
       data: {
         email: "admin@comanda.app", username: "admin",
-        password: hash("Admin123!"), name: "Carlos Menéndez", role: UserRole.ADMIN,
+        password: hash("12345678"), name: "Carlos Menéndez", role: UserRole.ADMIN,
         restaurantId: restaurant.id,
       },
     }),
     prisma.user.create({
       data: {
         email: "caja@comanda.app", username: "caja1",
-        password: hash("Caja123!"), name: "María Salazar", role: UserRole.CASHIER,
+        password: hash("12345678"), name: "María Salazar", role: UserRole.CASHIER,
         restaurantId: restaurant.id,
       },
     }),
     prisma.user.create({
       data: {
         email: "cocina1@comanda.app", username: "cocina1",
-        password: hash("Cocina123!"), name: "Pedro Guamán", role: UserRole.COOK_1,
+        password: hash("12345678"), name: "Pedro Guamán", role: UserRole.COOK_1,
         restaurantId: restaurant.id,
       },
     }),
     prisma.user.create({
       data: {
         email: "cocina2@comanda.app", username: "cocina2",
-        password: hash("Cocina123!"), name: "Rosa Imbaquingo", role: UserRole.COOK_2,
+        password: hash("12345678"), name: "Rosa Imbaquingo", role: UserRole.COOK_2,
         restaurantId: restaurant.id,
       },
     }),
     prisma.user.create({
       data: {
         email: "mesero1@comanda.app", username: "mesero1",
-        password: hash("Mesero123!"), name: "Luis Toapanta", role: UserRole.WAITER,
+        password: hash("12345678"), name: "Luis Toapanta", role: UserRole.WAITER,
         restaurantId: restaurant.id,
       },
     }),
     prisma.user.create({
       data: {
         email: "mesero2@comanda.app", username: "mesero2",
-        password: hash("Mesero123!"), name: "Andrea Pilco", role: UserRole.WAITER,
+        password: hash("12345678"), name: "Andrea Pilco", role: UserRole.WAITER,
         restaurantId: restaurant.id,
       },
     }),
     prisma.user.create({
       data: {
         email: "delivery@comanda.app", username: "delivery1",
-        password: hash("Delivery123!"), name: "Jorge Simbaña", role: UserRole.DELIVERY,
+        password: hash("12345678"), name: "Jorge Simbaña", role: UserRole.DELIVERY,
         restaurantId: restaurant.id,
       },
     }),

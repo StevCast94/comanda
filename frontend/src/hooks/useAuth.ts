@@ -10,7 +10,7 @@ interface AuthState {
 }
 
 interface AuthContextType extends AuthState {
-  login: (email: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   clearError: () => void;
   isRole: (...roles: UserRole[]) => boolean;
@@ -55,10 +55,10 @@ export function useAuthProvider(): AuthContextType {
     }
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (username: string, password: string) => {
     setState((s) => ({ ...s, loading: true, error: null }));
     try {
-      const { token, user } = await authApi.login(email, password);
+      const { token, user } = await authApi.login(username, password);
       localStorage.setItem("comanda_token", token);
       localStorage.setItem("comanda_user", JSON.stringify(user));
       setState({ user, token, loading: false, error: null });

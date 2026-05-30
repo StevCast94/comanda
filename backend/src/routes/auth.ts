@@ -7,7 +7,7 @@ import { authenticate, signToken } from "../middleware/auth";
 const router = Router();
 
 const loginSchema = z.object({
-  email: z.string().email("Email inválido"),
+  username: z.string().min(1, "Usuario requerido"),
   password: z.string().min(1, "Contraseña requerida"),
 });
 
@@ -19,17 +19,17 @@ const changePasswordSchema = z.object({
 // POST /api/auth/login
 router.post("/login", async (req: Request, res: Response) => {
   try {
-    const { email, password } = loginSchema.parse(req.body);
+    const { username, password } = loginSchema.parse(req.body);
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({ where: { username } });
     if (!user || !user.active) {
-      res.status(401).json({ error: "Credenciales inválidas" });
+      res.status(401).json({ error: "Usuario o contraseña incorrectos" });
       return;
     }
 
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
-      res.status(401).json({ error: "Credenciales inválidas" });
+      res.status(401).json({ error: "Usuario o contraseña incorrectos" });
       return;
     }
 

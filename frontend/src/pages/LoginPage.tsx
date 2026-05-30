@@ -5,7 +5,7 @@ import { UtensilsCrossed, Eye, EyeOff, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const { login, loading, error, clearError, redirectPath } = useAuth();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
 
@@ -13,7 +13,7 @@ export default function LoginPage() {
     e.preventDefault();
     clearError();
     try {
-      await login(email, password);
+      await login(username, password);
       navigate(redirectPath);
     } catch {
       // error is set in useAuth
@@ -36,15 +36,15 @@ export default function LoginPage() {
         <div className="rounded-xl bg-surface-2 p-6 shadow-lg">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="mb-1 block text-sm text-text-muted">Email</label>
+              <label className="mb-1 block text-sm text-text-muted">Usuario</label>
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="w-full rounded-lg border border-border bg-surface px-3 py-3 text-text outline-none transition focus:border-accent"
-                placeholder="tu@email.com"
+                placeholder="cocina1"
                 required
-                autoComplete="email"
+                autoComplete="username"
               />
             </div>
 
@@ -79,7 +79,7 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={loading || !email || !password}
+              disabled={loading || !username || !password}
               className="btn btn-primary w-full text-base disabled:opacity-50"
             >
               {loading ? (
@@ -108,20 +108,20 @@ export default function LoginPage() {
             <p className="mb-2 text-xs font-medium text-text-muted">Credenciales de desarrollo:</p>
             <div className="grid grid-cols-2 gap-1 text-xs text-text-muted">
               {[
-                ["Admin", "admin@comanda.app"],
-                ["Caja", "caja@comanda.app"],
-                ["Cocina 1", "cocina1@comanda.app"],
-                ["Cocina 2", "cocina2@comanda.app"],
-                ["Mesero", "mesero1@comanda.app"],
-                ["Super", "superadmin@comanda.app"],
-              ].map(([label, em]) => (
+                ["Admin", "admin"],
+                ["Caja", "caja1"],
+                ["Cocina 1", "cocina1"],
+                ["Cocina 2", "cocina2"],
+                ["Mesero", "mesero1"],
+                ["Super", "superadmin"],
+              ].map(([label, un]) => (
                 <button
-                  key={em}
-                  onClick={() => { setEmail(em); setPassword(label === "Super" || label === "Admin" ? "Admin123!" : label === "Caja" ? "Caja123!" : label?.startsWith("Cocina") ? "Cocina123!" : "Mesero123!"); }}
+                  key={un}
+                  onClick={() => { setUsername(un); setPassword("12345678"); }}
                   className="rounded px-2 py-1 text-left hover:bg-surface-3"
                 >
                   <span className="font-medium text-accent">{label}</span>
-                  <br />{em}
+                  <br />{un}
                 </button>
               ))}
             </div>
