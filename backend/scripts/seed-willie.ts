@@ -99,8 +99,9 @@ async function main() {
   ];
 
   for (const item of items) {
+    const { category, ...data } = item;
     const created = await prisma.menuItem.create({
-      data: { ...item, categoryId: catMap[item.category], restaurantId: r.id },
+      data: { ...data, categoryId: catMap[category], restaurantId: r.id },
     });
     itemMap[item.name] = created.id;
   }
