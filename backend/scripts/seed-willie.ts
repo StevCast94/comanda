@@ -27,10 +27,10 @@ async function main() {
   // ─── 2. Willie's — detect state ───────────────────────────
   const existing = await prisma.restaurant.findUnique({
     where: { slug: "willie" },
-    include: { menuItems: { take: 1 } },
+    include: { menuItems: { take: 1 }, combos: { take: 1 } },
   });
 
-  if (existing && existing.menuItems.length > 0) {
+  if (existing && existing.menuItems.length > 0 && existing.combos.length > 0) {
     console.log("  Willie's: already complete — skipping");
     if (anyWorkDone) console.log("✅ Seed done.");
     return;
@@ -38,7 +38,7 @@ async function main() {
 
   // Crash recovery: delete incomplete Willie's
   if (existing) {
-    console.log("  🧹 Willie's incomplete from crash — deleting...");
+    console.log("  🧹 Willie's incomplete (no combos) — deleting...");
     await prisma.restaurant.delete({ where: { slug: "willie" } });
   }
 
