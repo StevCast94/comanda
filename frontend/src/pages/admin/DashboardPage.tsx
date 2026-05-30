@@ -430,11 +430,7 @@ export default function AdminDashboard() {
           {section === "reports" && <ReportsPage />}
           {section === "inventory" && <InventoryPage />}
           {section === "tables" && <TablesPage />}
-          {section === "settings" && (
-            <div className="flex h-64 items-center justify-center">
-              <p className="text-text-muted">ConfiguraciÃ³n del restaurante â€” prÃ³ximamente</p>
-            </div>
-          )}
+          {section === "settings" && <ConfigPanel />}
         </main>
       </div>
 
@@ -475,6 +471,109 @@ function PaymentCard({ icon: Icon, label, amount, color }: {
       <Icon className={`mx-auto mb-1 h-5 w-5 ${color}`} />
       <p className="text-xs text-text-muted">{label}</p>
       <p className={`text-sm font-bold ${color}`}>${amount.toFixed(2)}</p>
+    </div>
+  );
+}
+
+
+
+// -----------------------------------------------------------
+// Config Panel
+// -----------------------------------------------------------
+
+function ConfigPanel() {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [info, setInfo] = useState({
+    name: "", address: "", phone: "", timezone: "America/Guayaquil", currency: "USD",
+  });
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.settings.restaurant();
+        const r = (res as any).restaurant || res;
+        setInfo({
+          name: r.name || "",
+          address: r.address || "",
+          phone: r.phone || "",
+          timezone: r.timezone || "America/Guayaquil",
+          currency: r.currency || "USD",
+        });
+      } catch {}
+      setLoading(false);
+    })();
+  }, []);
+
+  async function handleSave() {
+    setSaving(true); setMsg("");
+    try {
+      await api.settings.updateInfo(info);
+      setMsg("? Configuración guardada");
+    } catch (e: any) {
+      setMsg("? Error: " + (e.message || "desconocido"));
+    }
+    setSaving(false);
+    setTimeout(() => setMsg(""), 3000);
+  }
+
+  if (loading) return <div className="flex h-40 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-accent" /></div>;
+
+  return (
+    <div className="mx-auto max-w-lg space-y-6">
+      <div className="rounded-xl border border-border bg-surface-2 p-5">
+        <h2 className="mb-4 flex items-center gap-2 text-base font-bold text-text">
+          <Settings className="h-5 w-5 text-accent" /> Datos del Restaurante
+        </h2>
+        <div className="space-y-3">
+          <div>
+            <label className="mb-1 block text-xs text-text-muted">Nombre</label>
+            <input className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-accent"
+              value={info.name} onChange={e => setInfo({...info, name: e.target.value})} />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-text-muted">Dirección</label>
+            <input className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-accent"
+              value={info.address} onChange={e => setInfo({...info, address: e.target.value})} />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-text-muted">Teléfono</label>
+            <input className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-accent"
+              value={info.phone} onChange={e => setInfo({...info, phone: e.target.value})} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs text-text-muted">Zona horaria</label>
+              <select className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-accent"
+                value={info.timezone} onChange={e => setInfo({...info, timezone: e.target.value})}>
+                {["America/Guayaquil","America/Bogota","America/Lima","America/Mexico_City","America/Santiago","America/Buenos_Aires","America/Caracas"].map(tz => <option key={tz} value={tz}>{tz}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-text-muted">Moneda</label>
+              <select className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-accent"
+                value={info.currency} onChange={e => setInfo({...info, currency: e.target.value})}>
+                {["USD","COP","PEN","MXN","CLP","ARS"].map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {msg && <div className={`mt-3 rounded-lg px-3 py-2 text-sm ${msg.startsWith("?") ? "bg-success/10 text-success" : "bg-danger/10 text-danger"}`}>{msg}</div>}
+
+        <button onClick={handleSave} disabled={saving} className="btn btn-primary w-full mt-4 gap-2">
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          Guardar Cambios
+        </button>
+      </div>
+
+      <div className="rounded-xl border border-border bg-surface-2 p-5">
+        <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-text">
+          <DollarSign className="h-4 w-4 text-warning" /> Impuestos y Servicio
+        </h3>
+        <p className="text-xs text-text-muted">Configurable próximamente — actualmente IVA 15%, Servicio 10%.</p>
+      </div>
     </div>
   );
 }

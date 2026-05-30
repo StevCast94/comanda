@@ -67,6 +67,7 @@ export interface MenuItem {
   basePrice: number;
   categoryId: string;
   type: string;
+  customType: string | null;
   kitchen: KitchenStation;
   active: boolean;
   image: string | null;

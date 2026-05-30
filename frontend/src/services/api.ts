@@ -240,7 +240,9 @@ export const cashRegister = {
 
 export const settings = {
   tables: () => request<{ data: import("../types").Table[] }>("/restaurant/tables"),
-  restaurant: () => request<{ restaurant: import("../types").Restaurant }>("/restaurant/settings"),
+  restaurant: () => request<{ restaurant: import("../types").Restaurant & { address?: string | null; phone?: string | null; timezone?: string; currency?: string } }>("/restaurant/settings"),
+  updateInfo: (data: { name?: string; address?: string; phone?: string; timezone?: string; currency?: string }) =>
+    request<any>("/restaurant/info", { method: "PATCH", body: JSON.stringify(data) }),
   addTable: (number: number, floor: string) =>
     request<any>("/restaurant/tables", {
       method: "POST",

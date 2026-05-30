@@ -261,6 +261,7 @@ model MenuItem {
   categoryId   String
   restaurantId String
   type         MenuItemType
+  customType   String?
   kitchen      KitchenStation @default(KITCHEN_1)
   active       Boolean        @default(true)
   image        String?

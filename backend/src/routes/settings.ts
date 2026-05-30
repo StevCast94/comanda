@@ -76,4 +76,27 @@ router.delete("/tables/:id", authorize("ADMIN", "SUPERADMIN"), async (req: Reque
   }
 });
 
+// PATCH /api/restaurant/info
+auth: ADMIN, SUPERADMIN
+router.patch("/info", authorize("ADMIN", "SUPERADMIN"), async (req: Request, res: Response) => {
+  const restaurantId = req.restaurantId!;
+  try {
+    const { name, address, phone, timezone, currency } = req.body;
+    const data: Record<string, unknown> = {};
+    if (name !== undefined) data.name = name;
+    if (address !== undefined) data.address = address;
+    if (phone !== undefined) data.phone = phone;
+    if (timezone !== undefined) data.timezone = timezone;
+    if (currency !== undefined) data.currency = currency;
+
+    const restaurant = await prisma.restaurant.update({
+      where: { id: restaurantId },
+      data,
+    });
+    res.json({ restaurant });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 export default router;
