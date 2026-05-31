@@ -28,6 +28,7 @@ const app = express();
 const PORT = parseInt(process.env.PORT || "3000", 10);
 
 // ─── Global Middleware ──────────────────────────────────────
+app.set("trust proxy", 1); // Railway uses reverse proxy
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: "10mb" }));
 
@@ -60,7 +61,8 @@ app.use("/api/restaurant", settingsRoutes);
 app.use("/api/superadmin", superadminRoutes);
 
 // ─── Static Files (Frontend Build) ─────────────────────────
-app.use(express.static(path.join(__dirname, "..", "public"), {
+const publicPath = path.join(__dirname, "..", "..", "public");
+app.use(express.static(publicPath, {
   maxAge: "1y",
   immutable: true,
   index: false,
@@ -69,7 +71,7 @@ app.use(express.static(path.join(__dirname, "..", "public"), {
 // index.html — no cache (Express 5 compatible catch-all)
 app.get("/{*path}", (_req, res) => {
   res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-  res.sendFile(path.join(__dirname, "..", "public", "index.html"));
+  res.sendFile(path.join(publicPath, "index.html"));
 });
 
 // ─── Error Handler ──────────────────────────────────────────
