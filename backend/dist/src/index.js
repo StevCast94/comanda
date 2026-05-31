@@ -7,6 +7,7 @@ exports.prisma = void 0;
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const path_1 = __importDefault(require("path"));
+const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const client_1 = require("@prisma/client");
 const errorHandler_1 = require("./middleware/errorHandler");
 const auth_1 = __importDefault(require("./routes/auth"));
@@ -32,6 +33,14 @@ const PORT = parseInt(process.env.PORT || "3000", 10);
 // ─── Global Middleware ──────────────────────────────────────
 app.use((0, cors_1.default)({ origin: true, credentials: true }));
 app.use(express_1.default.json({ limit: "10mb" }));
+// Rate limiting: 300 requests/min per IP
+app.use((0, express_rate_limit_1.default)({
+    windowMs: 60 * 1000,
+    max: 300,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Demasiadas solicitudes. Intenta de nuevo en un minuto." },
+}));
 // ─── API Routes ─────────────────────────────────────────────
 app.use("/api/auth", auth_1.default);
 app.use("/api/register", register_1.default);

@@ -213,7 +213,7 @@ saRouter.put("/subscriptions/:id", async (req: SAReq, res: SARes) => {
     const limits = planLimits[plan];
 
     const sub = await saPrisma.subscription.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: {
         plan,
         price: limits.price,
@@ -232,7 +232,7 @@ saRouter.put("/subscriptions/:id", async (req: SAReq, res: SARes) => {
 export { saRouter as default };
 
 
-// PATCH /api/superadmin/restaurants/:id — Edit restaurant details
+// PATCH /api/superadmin/restaurants/:id ï¿½ Edit restaurant details
 saRouter.patch("/restaurants/:id", async (req: SAReq, res: SARes) => {
   try {
     const { name, slug, type, address, phone } = req.body;
@@ -261,7 +261,7 @@ saRouter.patch("/restaurants/:id", async (req: SAReq, res: SARes) => {
   }
 });
 
-// DELETE /api/superadmin/restaurants/:id — Hard delete
+// DELETE /api/superadmin/restaurants/:id ï¿½ Hard delete
 saRouter.delete("/restaurants/:id", async (req: SAReq, res: SARes) => {
   try {
     await saPrisma.restaurant.delete({
@@ -274,7 +274,7 @@ saRouter.delete("/restaurants/:id", async (req: SAReq, res: SARes) => {
   }
 });
 
-// PATCH /api/superadmin/restaurants/:id/admin — Reset admin credentials
+// PATCH /api/superadmin/restaurants/:id/admin ï¿½ Reset admin credentials
 saRouter.patch("/restaurants/:id/admin", async (req: SAReq, res: SARes) => {
   try {
     const { username, password, name } = req.body;

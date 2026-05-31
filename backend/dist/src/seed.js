@@ -7,28 +7,19 @@ const client_1 = require("@prisma/client");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const prisma = new client_1.PrismaClient();
 async function main() {
-    console.log("🌱 Seeding Comanda...");
-    // Clean existing data (dev only)
-    await prisma.$transaction([
-        prisma.deliveryOrder.deleteMany(),
-        prisma.orderItem.deleteMany(),
-        prisma.order.deleteMany(),
-        prisma.comboItem.deleteMany(),
-        prisma.modifier.deleteMany(),
-        prisma.combo.deleteMany(),
-        prisma.menuItem.deleteMany(),
-        prisma.category.deleteMany(),
-        prisma.cashRegister.deleteMany(),
-        prisma.expense.deleteMany(),
-        prisma.inventory.deleteMany(),
-        prisma.supplier.deleteMany(),
-        prisma.customer.deleteMany(),
-        prisma.deliveryZone.deleteMany(),
-        prisma.table.deleteMany(),
-        prisma.subscription.deleteMany(),
-        prisma.user.deleteMany(),
-        prisma.restaurant.deleteMany(),
-    ]);
+    const existing = await prisma.restaurant.findUnique({
+        where: { slug: "el-sabor-criollo" },
+        include: { menuItems: { take: 1 } },
+    });
+    if (existing && existing.menuItems.length > 0 && process.env.FORCE_RESEED !== "true") {
+        console.log("⏭️  El Sabor Criollo already complete — skipping");
+        return;
+    }
+    if (existing) {
+        console.log("🧹 El Sabor Criollo exists — recreating...");
+        await prisma.restaurant.delete({ where: { slug: "el-sabor-criollo" } });
+    }
+    console.log("🌱 Seeding El Sabor Criollo...");
     const hash = (pw) => bcrypt_1.default.hashSync(pw, 10);
     // ─── Restaurant ──────────────────────────────────────────
     const restaurant = await prisma.restaurant.create({
@@ -67,56 +58,56 @@ async function main() {
         prisma.user.create({
             data: {
                 email: "superadmin@comanda.app", username: "superadmin",
-                password: hash("Admin123!"), name: "Super Admin", role: client_1.UserRole.SUPERADMIN,
+                password: hash("12345678"), name: "Super Admin", role: client_1.UserRole.SUPERADMIN,
                 restaurantId: null,
             },
         }),
         prisma.user.create({
             data: {
                 email: "admin@comanda.app", username: "admin",
-                password: hash("Admin123!"), name: "Carlos Menéndez", role: client_1.UserRole.ADMIN,
+                password: hash("12345678"), name: "Carlos Menéndez", role: client_1.UserRole.ADMIN,
                 restaurantId: restaurant.id,
             },
         }),
         prisma.user.create({
             data: {
                 email: "caja@comanda.app", username: "caja1",
-                password: hash("Caja123!"), name: "María Salazar", role: client_1.UserRole.CASHIER,
+                password: hash("12345678"), name: "María Salazar", role: client_1.UserRole.CASHIER,
                 restaurantId: restaurant.id,
             },
         }),
         prisma.user.create({
             data: {
                 email: "cocina1@comanda.app", username: "cocina1",
-                password: hash("Cocina123!"), name: "Pedro Guamán", role: client_1.UserRole.COOK_1,
+                password: hash("12345678"), name: "Pedro Guamán", role: client_1.UserRole.COOK_1,
                 restaurantId: restaurant.id,
             },
         }),
         prisma.user.create({
             data: {
                 email: "cocina2@comanda.app", username: "cocina2",
-                password: hash("Cocina123!"), name: "Rosa Imbaquingo", role: client_1.UserRole.COOK_2,
+                password: hash("12345678"), name: "Rosa Imbaquingo", role: client_1.UserRole.COOK_2,
                 restaurantId: restaurant.id,
             },
         }),
         prisma.user.create({
             data: {
                 email: "mesero1@comanda.app", username: "mesero1",
-                password: hash("Mesero123!"), name: "Luis Toapanta", role: client_1.UserRole.WAITER,
+                password: hash("12345678"), name: "Luis Toapanta", role: client_1.UserRole.WAITER,
                 restaurantId: restaurant.id,
             },
         }),
         prisma.user.create({
             data: {
                 email: "mesero2@comanda.app", username: "mesero2",
-                password: hash("Mesero123!"), name: "Andrea Pilco", role: client_1.UserRole.WAITER,
+                password: hash("12345678"), name: "Andrea Pilco", role: client_1.UserRole.WAITER,
                 restaurantId: restaurant.id,
             },
         }),
         prisma.user.create({
             data: {
                 email: "delivery@comanda.app", username: "delivery1",
-                password: hash("Delivery123!"), name: "Jorge Simbaña", role: client_1.UserRole.DELIVERY,
+                password: hash("12345678"), name: "Jorge Simbaña", role: client_1.UserRole.DELIVERY,
                 restaurantId: restaurant.id,
             },
         }),
@@ -149,21 +140,21 @@ async function main() {
     // ─── Menu Items ──────────────────────────────────────────
     const itemMap = {};
     const items = [
-        // ── Proteínas (KITCHEN_2) ──────────────────────────────
-        { name: "Pollo a la plancha", description: "Pechuga de pollo a la plancha con especias", basePrice: 4.50, category: "A la Carta", type: client_1.MenuItemType.PROTEIN, kitchen: client_1.KitchenStation.KITCHEN_2, prepTime: 12,
+        // ── Proteínas (KITCHEN_1) ──────────────────────────────
+        { name: "Pollo a la plancha", description: "Pechuga de pollo a la plancha con especias", basePrice: 4.50, category: "A la Carta", type: client_1.MenuItemType.PROTEIN, kitchen: client_1.KitchenStation.KITCHEN_1, prepTime: 12,
             modifiers: [{ name: "Término medio", priceAdjustment: 0 }, { name: "Bien cocido", priceAdjustment: 0 }] },
-        { name: "Seco de pollo", description: "Pollo guisado en salsa de cerveza y naranjilla", basePrice: 5.00, category: "A la Carta", type: client_1.MenuItemType.PROTEIN, kitchen: client_1.KitchenStation.KITCHEN_2, prepTime: 15 },
-        { name: "Seco de carne", description: "Carne de res guisada en salsa criolla", basePrice: 6.00, category: "A la Carta", type: client_1.MenuItemType.PROTEIN, kitchen: client_1.KitchenStation.KITCHEN_2, prepTime: 18 },
-        { name: "Chuleta frita", description: "Chuleta de cerdo frita dorada", basePrice: 5.50, category: "A la Carta", type: client_1.MenuItemType.PROTEIN, kitchen: client_1.KitchenStation.KITCHEN_2, prepTime: 14 },
-        { name: "Carne asada", description: "Corte de res a la parrilla", basePrice: 7.00, category: "Asados", type: client_1.MenuItemType.PROTEIN, kitchen: client_1.KitchenStation.KITCHEN_2, prepTime: 20,
+        { name: "Seco de pollo", description: "Pollo guisado en salsa de cerveza y naranjilla", basePrice: 5.00, category: "A la Carta", type: client_1.MenuItemType.PROTEIN, kitchen: client_1.KitchenStation.KITCHEN_1, prepTime: 15 },
+        { name: "Seco de carne", description: "Carne de res guisada en salsa criolla", basePrice: 6.00, category: "A la Carta", type: client_1.MenuItemType.PROTEIN, kitchen: client_1.KitchenStation.KITCHEN_1, prepTime: 18 },
+        { name: "Chuleta frita", description: "Chuleta de cerdo frita dorada", basePrice: 5.50, category: "A la Carta", type: client_1.MenuItemType.PROTEIN, kitchen: client_1.KitchenStation.KITCHEN_1, prepTime: 14 },
+        { name: "Carne asada", description: "Corte de res a la parrilla", basePrice: 7.00, category: "Asados", type: client_1.MenuItemType.PROTEIN, kitchen: client_1.KitchenStation.KITCHEN_1, prepTime: 20,
             modifiers: [{ name: "Término 1/4", priceAdjustment: 0 }, { name: "Término 3/4", priceAdjustment: 0 }, { name: "Bien asado", priceAdjustment: 0 }] },
-        { name: "Pollo asado", description: "1/4 de pollo a las brasas", basePrice: 5.50, category: "Asados", type: client_1.MenuItemType.PROTEIN, kitchen: client_1.KitchenStation.KITCHEN_2, prepTime: 18 },
-        { name: "Churrasco", description: "Lomo fino a la parrilla", basePrice: 8.50, category: "Asados", type: client_1.MenuItemType.PROTEIN, kitchen: client_1.KitchenStation.KITCHEN_2, prepTime: 15,
+        { name: "Pollo asado", description: "1/4 de pollo a las brasas", basePrice: 5.50, category: "Asados", type: client_1.MenuItemType.PROTEIN, kitchen: client_1.KitchenStation.KITCHEN_1, prepTime: 18 },
+        { name: "Churrasco", description: "Lomo fino a la parrilla", basePrice: 8.50, category: "Asados", type: client_1.MenuItemType.PROTEIN, kitchen: client_1.KitchenStation.KITCHEN_1, prepTime: 15,
             modifiers: [{ name: "Término medio", priceAdjustment: 0 }, { name: "Término 3/4", priceAdjustment: 0 }, { name: "Con huevo frito", priceAdjustment: 0.75 }] },
-        { name: "Guatita", description: "Estómago de res en salsa de maní", basePrice: 5.50, category: "A la Carta", type: client_1.MenuItemType.PROTEIN, kitchen: client_1.KitchenStation.KITCHEN_2, prepTime: 10 },
-        { name: "Encebollado", description: "Sopa de albacora con yuca y cebolla encurtida", basePrice: 4.50, category: "A la Carta", type: client_1.MenuItemType.MAIN, kitchen: client_1.KitchenStation.KITCHEN_2, prepTime: 8,
+        { name: "Guatita", description: "Estómago de res en salsa de maní", basePrice: 5.50, category: "A la Carta", type: client_1.MenuItemType.PROTEIN, kitchen: client_1.KitchenStation.KITCHEN_1, prepTime: 10 },
+        { name: "Encebollado", description: "Sopa de albacora con yuca y cebolla encurtida", basePrice: 4.50, category: "A la Carta", type: client_1.MenuItemType.MAIN, kitchen: client_1.KitchenStation.KITCHEN_1, prepTime: 8,
             modifiers: [{ name: "Con chifles", priceAdjustment: 0.50 }, { name: "Extra limón", priceAdjustment: 0 }] },
-        { name: "Tilapia frita", description: "Filete de tilapia crujiente", basePrice: 6.00, category: "A la Carta", type: client_1.MenuItemType.PROTEIN, kitchen: client_1.KitchenStation.KITCHEN_2, prepTime: 12 },
+        { name: "Tilapia frita", description: "Filete de tilapia crujiente", basePrice: 6.00, category: "A la Carta", type: client_1.MenuItemType.PROTEIN, kitchen: client_1.KitchenStation.KITCHEN_1, prepTime: 12 },
         // ── Acompañantes (KITCHEN_1) ───────────────────────────
         { name: "Arroz blanco", description: "Porción de arroz", basePrice: 1.00, category: "A la Carta", type: client_1.MenuItemType.SIDE, kitchen: client_1.KitchenStation.KITCHEN_1, prepTime: 3 },
         { name: "Menestra de lenteja", description: "Menestra guisada de lentejas", basePrice: 1.50, category: "A la Carta", type: client_1.MenuItemType.SIDE, kitchen: client_1.KitchenStation.KITCHEN_1, prepTime: 5 },
@@ -179,14 +170,14 @@ async function main() {
         { name: "Huevos revueltos", description: "Huevos revueltos con cebolla y tomate", basePrice: 2.00, category: "Desayunos", type: client_1.MenuItemType.MAIN, kitchen: client_1.KitchenStation.KITCHEN_1, prepTime: 5 },
         { name: "Tigrillo", description: "Verde majado con huevo y queso", basePrice: 4.00, category: "Desayunos", type: client_1.MenuItemType.MAIN, kitchen: client_1.KitchenStation.KITCHEN_1, prepTime: 10 },
         // ── Bebidas (BAR) ──────────────────────────────────────
-        { name: "Coca-Cola", description: "Cola personal 400ml", basePrice: 1.00, category: "Bebidas", type: client_1.MenuItemType.DRINK, kitchen: client_1.KitchenStation.BAR, prepTime: 1 },
-        { name: "Sprite", description: "Sprite personal 400ml", basePrice: 1.00, category: "Bebidas", type: client_1.MenuItemType.DRINK, kitchen: client_1.KitchenStation.BAR, prepTime: 1 },
-        { name: "Agua mineral", description: "Agua sin gas 500ml", basePrice: 0.75, category: "Bebidas", type: client_1.MenuItemType.DRINK, kitchen: client_1.KitchenStation.BAR, prepTime: 1 },
-        { name: "Jugo de naranjilla", description: "Jugo natural de naranjilla", basePrice: 1.50, category: "Bebidas", type: client_1.MenuItemType.DRINK, kitchen: client_1.KitchenStation.BAR, prepTime: 3 },
-        { name: "Jugo de mora", description: "Jugo natural de mora", basePrice: 1.50, category: "Bebidas", type: client_1.MenuItemType.DRINK, kitchen: client_1.KitchenStation.BAR, prepTime: 3 },
-        { name: "Jugo de tomate de árbol", description: "Jugo natural", basePrice: 1.50, category: "Bebidas", type: client_1.MenuItemType.DRINK, kitchen: client_1.KitchenStation.BAR, prepTime: 3 },
-        { name: "Cerveza Pilsener", description: "Cerveza nacional 600ml", basePrice: 2.50, category: "Bebidas", type: client_1.MenuItemType.DRINK, kitchen: client_1.KitchenStation.BAR, prepTime: 1 },
-        { name: "Café de chuspa", description: "Café pasado tradicional", basePrice: 1.00, category: "Bebidas", type: client_1.MenuItemType.DRINK, kitchen: client_1.KitchenStation.BAR, prepTime: 3 },
+        { name: "Coca-Cola", description: "Cola personal 400ml", basePrice: 1.00, category: "Bebidas", type: client_1.MenuItemType.DRINK, kitchen: client_1.KitchenStation.NONE, prepTime: 1 },
+        { name: "Sprite", description: "Sprite personal 400ml", basePrice: 1.00, category: "Bebidas", type: client_1.MenuItemType.DRINK, kitchen: client_1.KitchenStation.NONE, prepTime: 1 },
+        { name: "Agua mineral", description: "Agua sin gas 500ml", basePrice: 0.75, category: "Bebidas", type: client_1.MenuItemType.DRINK, kitchen: client_1.KitchenStation.NONE, prepTime: 1 },
+        { name: "Jugo de naranjilla", description: "Jugo natural de naranjilla", basePrice: 1.50, category: "Bebidas", type: client_1.MenuItemType.DRINK, kitchen: client_1.KitchenStation.NONE, prepTime: 3 },
+        { name: "Jugo de mora", description: "Jugo natural de mora", basePrice: 1.50, category: "Bebidas", type: client_1.MenuItemType.DRINK, kitchen: client_1.KitchenStation.NONE, prepTime: 3 },
+        { name: "Jugo de tomate de árbol", description: "Jugo natural", basePrice: 1.50, category: "Bebidas", type: client_1.MenuItemType.DRINK, kitchen: client_1.KitchenStation.NONE, prepTime: 3 },
+        { name: "Cerveza Pilsener", description: "Cerveza nacional 600ml", basePrice: 2.50, category: "Bebidas", type: client_1.MenuItemType.DRINK, kitchen: client_1.KitchenStation.NONE, prepTime: 1 },
+        { name: "Café de chuspa", description: "Café pasado tradicional", basePrice: 1.00, category: "Bebidas", type: client_1.MenuItemType.DRINK, kitchen: client_1.KitchenStation.NONE, prepTime: 3 },
         // ── Postres (KITCHEN_1) ────────────────────────────────
         { name: "Espumilla", description: "Espumilla de guayaba", basePrice: 1.00, category: "Postres", type: client_1.MenuItemType.DESSERT, kitchen: client_1.KitchenStation.KITCHEN_1, prepTime: 2 },
         { name: "Tres leches", description: "Porción de torta tres leches", basePrice: 3.00, category: "Postres", type: client_1.MenuItemType.DESSERT, kitchen: client_1.KitchenStation.KITCHEN_1, prepTime: 2 },

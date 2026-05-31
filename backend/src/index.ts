@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import path from "path";
+import rateLimit from "express-rate-limit";
 import { PrismaClient } from "@prisma/client";
 import { errorHandler } from "./middleware/errorHandler";
 import authRoutes from "./routes/auth";
@@ -29,6 +30,15 @@ const PORT = parseInt(process.env.PORT || "3000", 10);
 // ─── Global Middleware ──────────────────────────────────────
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: "10mb" }));
+
+// Rate limiting: 300 requests/min per IP
+app.use(rateLimit({
+  windowMs: 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Demasiadas solicitudes. Intenta de nuevo en un minuto." },
+}));
 
 // ─── API Routes ─────────────────────────────────────────────
 app.use("/api/auth", authRoutes);

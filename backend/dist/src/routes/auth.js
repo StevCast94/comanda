@@ -10,7 +10,7 @@ const index_1 = require("../index");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
 const loginSchema = zod_1.z.object({
-    email: zod_1.z.string().email("Email inválido"),
+    username: zod_1.z.string().min(1, "Usuario requerido"),
     password: zod_1.z.string().min(1, "Contraseña requerida"),
 });
 const changePasswordSchema = zod_1.z.object({
@@ -20,15 +20,15 @@ const changePasswordSchema = zod_1.z.object({
 // POST /api/auth/login
 router.post("/login", async (req, res) => {
     try {
-        const { email, password } = loginSchema.parse(req.body);
-        const user = await index_1.prisma.user.findUnique({ where: { email } });
+        const { username, password } = loginSchema.parse(req.body);
+        const user = await index_1.prisma.user.findUnique({ where: { username } });
         if (!user || !user.active) {
-            res.status(401).json({ error: "Credenciales inválidas" });
+            res.status(401).json({ error: "Usuario o contraseña incorrectos" });
             return;
         }
         const valid = await bcrypt_1.default.compare(password, user.password);
         if (!valid) {
-            res.status(401).json({ error: "Credenciales inválidas" });
+            res.status(401).json({ error: "Usuario o contraseña incorrectos" });
             return;
         }
         // Update last login
@@ -86,7 +86,7 @@ router.get("/me", auth_1.authenticate, async (req, res) => {
                 restaurant: { select: { id: true, name: true, slug: true, logo: true, settings: true, currency: true } },
             },
         });
-        if (!user || !user) {
+        if (!user) {
             res.status(404).json({ error: "Usuario no encontrado" });
             return;
         }

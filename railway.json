@@ -1,9 +1,9 @@
 {
   "build": {
-    "buildCommand": "cd backend && npm install && npx prisma generate"
+    "buildCommand": "cd backend && npm install && npx prisma generate && npx tsc"
   },
   "deploy": {
-    "startCommand": "cd backend && npx prisma migrate deploy && npx tsx scripts/migrate-custom-type.ts && npx tsx scripts/migrate-kitchen.ts && npx tsx scripts/reset-passwords.ts && npx tsx scripts/seed-sabor.ts && npx tsx src/index.ts",
+    "startCommand": "cd backend && npx prisma migrate deploy && npx tsx scripts/bootstrap.ts && node dist/src/index.js",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   }

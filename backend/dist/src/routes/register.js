@@ -51,7 +51,7 @@ router.post("/", async (req, res) => {
             const admin = await tx.user.create({
                 data: {
                     email: data.adminEmail,
-                    username: data.slug + "-admin",
+                    username: "admin-" + data.slug,
                     password: hashedPassword,
                     name: data.adminName,
                     role: "ADMIN",

@@ -24,7 +24,7 @@ const createOrderSchema = zod_1.z.object({
         quantity: zod_1.z.number().int().positive(),
         unitPrice: zod_1.z.number().nonnegative(),
         notes: zod_1.z.string().optional(),
-        kitchen: zod_1.z.enum(["KITCHEN_1", "KITCHEN_2", "BAR", "BOTH", "NONE"]),
+        kitchen: zod_1.z.enum(["KITCHEN_1", "NONE"]),
         modifiers: zod_1.z.array(zod_1.z.object({
             modifierId: zod_1.z.string(),
             name: zod_1.z.string(),
@@ -181,6 +181,32 @@ ordRouter.get("/", async (req, res) => {
         res.status(500).json({ error: "Error cargando órdenes" });
     }
 });
+// GET /api/orders/live — tracking en tiempo real para caja (DEBE ir antes de /:id)
+ordRouter.get("/live", (0, auth_1.authorize)("CASHIER", "ADMIN"), async (req, res) => {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const orders = await index_1.prisma.order.findMany({
+            where: {
+                restaurantId: req.restaurantId,
+                createdAt: { gte: today },
+                status: { not: "CANCELLED" },
+            },
+            include: {
+                items: { include: { menuItem: { select: { name: true } }, combo: { select: { name: true } } } },
+                table: { select: { number: true, floor: true } },
+                cashier: { select: { name: true } },
+                waiter: { select: { name: true } },
+            },
+            orderBy: { createdAt: "desc" },
+        });
+        res.json({ orders });
+    }
+    catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Error" });
+    }
+});
 // GET /api/orders/:id
 ordRouter.get("/:id", async (req, res) => {
     try {
@@ -253,7 +279,7 @@ ordRouter.patch("/:id/confirm-payment", (0, auth_1.authorize)("CASHIER", "ADMIN"
             res.status(400).json({ error: "No hay caja abierta. Abre la caja antes de cobrar." });
             return;
         }
-        // Update order to PAID
+        // Update order to PAID first
         const updated = await index_1.prisma.order.update({
             where: { id: req.params.id },
             data: {
@@ -263,11 +289,24 @@ ordRouter.patch("/:id/confirm-payment", (0, auth_1.authorize)("CASHIER", "ADMIN"
                 paidAt: new Date(),
             },
             include: {
-                items: { include: { menuItem: true, combo: true } },
+                items: true,
                 table: true,
                 waiter: { select: { name: true } },
             },
         });
+        // If ALL items have kitchen NONE or BAR (bebidas, postres), auto-advance to READY
+        const allItemsNoKitchen = updated.items.length > 0 && updated.items.every((item) => item.kitchen === "NONE" || item.kitchen === "BAR");
+        if (allItemsNoKitchen) {
+            await index_1.prisma.orderItem.updateMany({
+                where: { orderId: updated.id },
+                data: { status: "READY", readyAt: new Date() },
+            });
+            await index_1.prisma.order.update({
+                where: { id: updated.id },
+                data: { status: "READY" },
+            });
+            updated.status = "READY";
+        }
         // Update cash register totals
         const updateField = paymentMethod === "CASH" ? "totalCash"
             : paymentMethod === "CARD" ? "totalCard" : "totalTransfer";
@@ -283,6 +322,100 @@ ordRouter.patch("/:id/confirm-payment", (0, auth_1.authorize)("CASHIER", "ADMIN"
     catch (err) {
         console.error(err);
         res.status(500).json({ error: "Error confirmando pago" });
+    }
+});
+// PATCH /api/orders/:id/items — update items (CASHIER, WAITER, ADMIN edits pending order)
+ordRouter.patch("/:id/items", (0, auth_1.authorize)("CASHIER", "ADMIN", "WAITER"), async (req, res) => {
+    try {
+        const { items } = req.body;
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            res.status(400).json({ error: "Se requiere al menos un ítem" });
+            return;
+        }
+        const order = await index_1.prisma.order.findUnique({
+            where: { id: req.params.id },
+            include: { items: true },
+        });
+        if (!order) {
+            res.status(404).json({ error: "Orden no encontrada" });
+            return;
+        }
+        if (order.status !== "PENDING") {
+            res.status(400).json({ error: "Solo se pueden editar órdenes pendientes" });
+            return;
+        }
+        // Delete existing items
+        await index_1.prisma.orderItem.deleteMany({ where: { orderId: order.id } });
+        // Create new items
+        let subtotal = 0;
+        const newItems = items.map((item) => {
+            const modTotal = (item.modifiers || []).reduce((s, m) => s + m.priceAdjustment, 0);
+            const totalPrice = (item.unitPrice + modTotal) * item.quantity;
+            subtotal += totalPrice;
+            return {
+                menuItemId: item.menuItemId || null,
+                comboId: item.comboId || null,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                totalPrice,
+                notes: item.notes,
+                kitchen: item.kitchen || "KITCHEN_1",
+                modifiers: item.modifiers || [],
+                comboSelections: item.comboSelections || undefined,
+            };
+        });
+        const restaurant = await index_1.prisma.restaurant.findUnique({ where: { id: req.restaurantId } });
+        const settings = restaurant?.settings || {};
+        const taxRate = settings.taxRate ?? 0.15;
+        const serviceRate = settings.serviceRate ?? 0.10;
+        const taxAmount = Math.round(subtotal * taxRate * 100) / 100;
+        const serviceAmount = Math.round(subtotal * serviceRate * 100) / 100;
+        const total = Math.round((subtotal + taxAmount + serviceAmount) * 100) / 100;
+        const updated = await index_1.prisma.order.update({
+            where: { id: order.id },
+            data: {
+                subtotal,
+                taxAmount,
+                serviceAmount,
+                total,
+                items: { create: newItems },
+            },
+            include: {
+                items: { include: { menuItem: { select: { name: true } }, combo: { select: { name: true } } } },
+                table: true,
+                waiter: { select: { name: true } },
+            },
+        });
+        res.json({ order: updated });
+    }
+    catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Error actualizando items" });
+    }
+});
+// DELETE /api/orders/:id — ADMIN only, hard delete
+ordRouter.delete("/:id", (0, auth_1.authorize)("ADMIN"), async (req, res) => {
+    try {
+        const order = await index_1.prisma.order.findUnique({
+            where: { id: req.params.id },
+            select: { id: true, restaurantId: true },
+        });
+        if (!order) {
+            res.status(404).json({ error: "Orden no encontrada" });
+            return;
+        }
+        if (order.restaurantId !== req.restaurantId) {
+            res.status(403).json({ error: "Sin acceso" });
+            return;
+        }
+        await index_1.prisma.order.delete({
+            where: { id: req.params.id },
+        });
+        res.json({ message: "Orden eliminada" });
+    }
+    catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Error eliminando orden" });
     }
 });
 //# sourceMappingURL=orders.js.map

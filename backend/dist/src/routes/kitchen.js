@@ -8,16 +8,17 @@ const tenant_1 = require("../middleware/tenant");
 const kitRouter = (0, express_1.Router)();
 exports.default = kitRouter;
 kitRouter.use(auth_1.authenticate, tenant_1.tenantIsolation);
-// GET /api/kitchen/orders?kitchen=KITCHEN_1&status=PENDING,PREPARING
+// GET /api/kitchen/orders?status=PENDING,PREPARING
+// Unified KDS — ALL kitchen stations (except NONE) shown in one screen
+// COOK_1, COOK_2, ADMIN all see the same view
 kitRouter.get("/orders", (0, auth_1.authorize)("COOK_1", "COOK_2", "ADMIN"), async (req, res) => {
     try {
-        const { kitchen, status } = req.query;
+        const { status } = req.query;
         const statuses = status ? status.split(",") : ["PENDING", "PREPARING"];
-        const kitchenFilter = kitchen || (req.user.role === "COOK_1" ? "KITCHEN_1" : "KITCHEN_2");
-        // Get order items for this kitchen station
+        // All non-NONE items visible to the single kitchen screen
         const items = await index_1.prisma.orderItem.findMany({
             where: {
-                kitchen: { in: kitchenFilter === "KITCHEN_1" ? ["KITCHEN_1", "BOTH"] : ["KITCHEN_2", "BOTH"] },
+                kitchen: { not: "NONE" },
                 status: { in: statuses },
                 order: {
                     restaurantId: req.restaurantId,
@@ -51,37 +52,40 @@ kitRouter.get("/orders", (0, auth_1.authorize)("COOK_1", "COOK_2", "ADMIN"), asy
         res.status(500).json({ error: "Error cargando órdenes de cocina" });
     }
 });
-// PATCH /api/kitchen/items/:id/status
+// PATCH /api/kitchen/items/:id/status — Atomic: update item + check order readiness in one transaction
 kitRouter.patch("/items/:id/status", (0, auth_1.authorize)("COOK_1", "COOK_2", "ADMIN"), async (req, res) => {
     try {
         const { status } = req.body;
-        const updateData = { status };
-        if (status === "PREPARING")
-            updateData.prepStartedAt = new Date();
-        if (status === "READY")
-            updateData.readyAt = new Date();
-        const item = await index_1.prisma.orderItem.update({
-            where: { id: req.params.id },
-            data: updateData,
-            include: { order: { select: { id: true, restaurantId: true } } },
-        });
-        // Check if ALL items in this order are READY
-        const pendingItems = await index_1.prisma.orderItem.count({
-            where: { orderId: item.orderId, status: { not: "READY" }, kitchen: { not: "NONE" } },
-        });
-        if (pendingItems === 0) {
-            await index_1.prisma.order.update({
-                where: { id: item.orderId },
-                data: { status: "READY" },
+        const result = await index_1.prisma.$transaction(async (tx) => {
+            const updateData = { status };
+            if (status === "PREPARING")
+                updateData.prepStartedAt = new Date();
+            if (status === "READY")
+                updateData.readyAt = new Date();
+            const item = await tx.orderItem.update({
+                where: { id: req.params.id },
+                data: updateData,
+                include: { order: { select: { id: true, restaurantId: true } } },
             });
-        }
-        else if (status === "PREPARING") {
-            await index_1.prisma.order.update({
-                where: { id: item.orderId },
-                data: { status: "PREPARING" },
+            // Count remaining non-NONE, non-READY items (atomic within tx)
+            const pendingItems = await tx.orderItem.count({
+                where: { orderId: item.orderId, status: { not: "READY" }, kitchen: { not: "NONE" } },
             });
-        }
-        res.json({ item, allReady: pendingItems === 0 });
+            if (pendingItems === 0) {
+                await tx.order.update({
+                    where: { id: item.orderId },
+                    data: { status: "READY" },
+                });
+            }
+            else if (status === "PREPARING") {
+                await tx.order.update({
+                    where: { id: item.orderId },
+                    data: { status: "PREPARING" },
+                });
+            }
+            return { item, allReady: pendingItems === 0 };
+        });
+        res.json(result);
     }
     catch (err) {
         console.error(err);

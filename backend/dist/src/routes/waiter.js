@@ -8,14 +8,16 @@ const tenant_1 = require("../middleware/tenant");
 const waitRouter = (0, express_1.Router)();
 exports.default = waitRouter;
 waitRouter.use(auth_1.authenticate, tenant_1.tenantIsolation);
-// GET /api/waiter/pending — Orders ready for delivery
+// GET /api/waiter/pending?orderType=DINE_IN,TAKEAWAY — Orders ready for delivery
 waitRouter.get("/pending", (0, auth_1.authorize)("WAITER", "ADMIN"), async (req, res) => {
     try {
+        const orderTypeParam = req.query.orderType;
+        const orderTypes = orderTypeParam ? orderTypeParam.split(",") : ["DINE_IN", "TAKEAWAY"];
         const orders = await index_1.prisma.order.findMany({
             where: {
                 restaurantId: req.restaurantId,
                 status: "READY",
-                orderType: "DINE_IN",
+                orderType: { in: orderTypes },
             },
             include: {
                 items: {
