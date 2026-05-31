@@ -71,18 +71,6 @@ router.post("/", checkSubscription, authorize("ADMIN"), async (req: Request, res
       return;
     }
 
-    // Validate basePrice >= sum of non-optional items
-    const menuItems = await prisma.menuItem.findMany({
-      where: { id: { in: items.map(i => i.menuItemId) }, restaurantId: rId },
-      select: { id: true, basePrice: true },
-    });
-    const priceMap = new Map(menuItems.map(m => [m.id, m.basePrice]));
-    const minRequired = items.filter(i => !i.isOptional).reduce((s, i) => s + (priceMap.get(i.menuItemId) || 0), 0);
-    if (data.basePrice < minRequired) {
-      res.status(400).json({ error: `El precio base ($${data.basePrice.toFixed(2)}) no puede ser menor que la suma de ítems obligatorios ($${minRequired.toFixed(2)})` });
-      return;
-    }
-
     const combo = await prisma.combo.create({
       data: {
         ...data,
