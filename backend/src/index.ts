@@ -78,7 +78,7 @@ app.use("/app", express.static(appPath, {
   index: false,
 }));
 
-app.get("/app/*", (_req, res) => {
+app.get("/app/{*path}", (_req, res) => {
   res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   res.sendFile(path.join(appPath, "index.html"));
 });
@@ -86,10 +86,10 @@ app.get("/app/*", (_req, res) => {
 // ─── Static Assets & legacy redirect to /app ───────────────
 app.use(express.static(publicPath, { maxAge: "1y", immutable: true, index: false }));
 
-// index.html — no cache (Express 5 compatible catch-all)
-app.get("/{*path}", (_req, res) => {
-  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-  res.sendFile(path.join(publicPath, "index.html"));
+// ─── Legacy catch-all redirect to landing ──────────────────
+app.get("/{*path}", (req, res, next) => {
+  if (req.path.startsWith("/api/") || req.path === "/") return next();
+  res.redirect("/app/");
 });
 
 // ─── Error Handler ──────────────────────────────────────────
