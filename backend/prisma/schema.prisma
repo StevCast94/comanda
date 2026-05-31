@@ -576,3 +576,18 @@ model Customer {
   @@index([restaurantId])
   @@index([restaurantId, name])
 }
+
+model Lead {
+  id           String   @id @default(cuid())
+  name         String
+  restaurant   String?
+  email        String
+  phone        String?
+  message      String?
+  source       String   @default("landing")
+  status       String   @default("new")
+  createdAt    DateTime @default(now())
+
+  @@index([status])
+  @@index([createdAt])
+}

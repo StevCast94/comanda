@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comanda — Gestión Inteligente para Restaurantes</title>
+<meta name="description" content="Digitaliza tu restaurante con Comanda: POS, Cocina, Meseros y Reportería en un solo lugar. Empieza gratis.">
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box }
+  html { scroll-behavior:smooth }
+  body { font-family: 'Inter', system-ui, -apple-system, sans-serif; color:#1e293b; line-height:1.6; background:#fff }
+  .container { max-width:1100px; margin:0 auto; padding:0 24px }
+  .btn { display:inline-flex; align-items:center; gap:8px; padding:14px 28px; border-radius:12px; font-weight:700; font-size:16px; text-decoration:none; transition:.2s; cursor:pointer; border:none }
+  .btn-primary { background:#dc2626; color:#fff }
+  .btn-primary:hover { background:#b91c1c; transform:translateY(-1px) }
+  .btn-outline { border:2px solid #dc2626; color:#dc2626; background:transparent }
+  .btn-outline:hover { background:#dc2626; color:#fff }
+  .btn-white { background:#fff; color:#dc2626 }
+  .btn-white:hover { background:#fef2f2 }
+
+  /* Nav */
+  nav { position:sticky; top:0; z-index:100; background:rgba(255,255,255,.95); backdrop-filter:blur(10px); border-bottom:1px solid #e2e8f0 }
+  nav .container { display:flex; align-items:center; justify-content:space-between; height:64px }
+  nav .logo { font-size:24px; font-weight:800; color:#dc2626; text-decoration:none }
+  nav .links { display:flex; gap:24px; align-items:center }
+  nav .links a { color:#64748b; text-decoration:none; font-weight:500; font-size:15px; transition:.2s }
+  nav .links a:hover { color:#dc2626 }
+  @media (max-width:768px) { nav .links { display:none } }
+
+  /* Hero */
+  .hero { padding:100px 0 80px; text-align:center; background:linear-gradient(135deg, #fef2f2 0%, #fff 50%, #f8fafc 100%) }
+  .hero h1 { font-size:48px; font-weight:900; line-height:1.1; color:#0f172a; margin-bottom:20px; letter-spacing:-1px }
+  .hero h1 span { color:#dc2626 }
+  .hero p { font-size:20px; color:#64748b; max-width:600px; margin:0 auto 32px }
+  .hero .cta { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-bottom:24px }
+  .hero .email-capture { display:flex; gap:8px; justify-content:center; margin-top:24px }
+  .hero .email-capture input { padding:14px 20px; border-radius:12px; border:2px solid #e2e8f0; font-size:15px; width:280px; outline:none; transition:.2s }
+  .hero .email-capture input:focus { border-color:#dc2626 }
+  @media (max-width:640px) { .hero h1 { font-size:32px } .hero p { font-size:16px } .hero { padding:60px 0 50px } }
+
+  /* Section */
+  section { padding:80px 0 }
+  section h2 { font-size:36px; font-weight:800; text-align:center; margin-bottom:16px; letter-spacing:-.5px }
+  section .subtitle { text-align:center; color:#64748b; font-size:18px; max-width:500px; margin:0 auto 48px }
+  @media (max-width:640px) { section { padding:50px 0 } section h2 { font-size:28px } }
+
+  /* How it works */
+  .steps { display:grid; grid-template-columns:1fr 1fr 1fr; gap:24px }
+  .step-card { text-align:center; padding:32px 20px; border-radius:16px; border:1px solid #e2e8f0; transition:.2s }
+  .step-card:hover { border-color:#dc2626; box-shadow:0 4px 24px rgba(220,38,38,.08) }
+  .step-card .num { display:inline-flex; align-items:center; justify-content:center; width:48px; height:48px; border-radius:50%; background:#fef2f2; color:#dc2626; font-size:22px; font-weight:800; margin-bottom:16px }
+  .step-card h3 { font-size:18px; margin-bottom:8px }
+  .step-card p { color:#64748b; font-size:15px }
+  @media (max-width:768px) { .steps { grid-template-columns:1fr } }
+
+  /* Features */
+  .features { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px }
+  .feature { padding:24px; border-radius:12px; border:1px solid #f1f5f9; background:#f8fafc }
+  .feature .icon { font-size:32px; margin-bottom:12px }
+  .feature h3 { font-size:16px; margin-bottom:6px }
+  .feature p { color:#64748b; font-size:14px }
+  @media (max-width:768px) { .features { grid-template-columns:1fr 1fr } }
+  @media (max-width:480px) { .features { grid-template-columns:1fr } }
+
+  /* Plans */
+  .plans { display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; align-items:start }
+  .plan-card { border-radius:16px; padding:32px; border:2px solid #e2e8f0; text-align:center; transition:.2s }
+  .plan-card.featured { border-color:#dc2626; box-shadow:0 8px 40px rgba(220,38,38,.12) }
+  .plan-card h3 { font-size:20px; margin-bottom:8px }
+  .plan-card .price { font-size:42px; font-weight:900; color:#dc2626; margin:16px 0 }
+  .plan-card .price span { font-size:16px; font-weight:400; color:#64748b }
+  .plan-card .features-list { text-align:left; margin:20px 0; font-size:14px; color:#64748b }
+  .plan-card .features-list li { margin-bottom:8px; list-style:none }
+  .plan-card .features-list li::before { content:"✓ "; color:#16a34a; font-weight:700 }
+  @media (max-width:768px) { .plans { grid-template-columns:1fr } }
+
+  /* Testimonials */
+  .testimonials { display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px }
+  .testimonial { padding:24px; border-radius:12px; background:#f8fafc; border:1px solid #f1f5f9 }
+  .testimonial .stars { color:#f59e0b; font-size:18px; margin-bottom:8px }
+  .testimonial p { color:#475569; font-size:15px; font-style:italic; margin-bottom:12px }
+  .testimonial .author { font-weight:700; font-size:14px; color:#1e293b }
+  .testimonial .role { font-size:13px; color:#94a3b8 }
+  @media (max-width:768px) { .testimonials { grid-template-columns:1fr } }
+
+  /* Demo form */
+  .demo-section { background:#0f172a; color:#fff; padding:80px 0 }
+  .demo-section h2 { color:#fff }
+  .demo-section .subtitle { color:#94a3b8 }
+  .demo-grid { display:grid; grid-template-columns:1fr 1fr; gap:40px; align-items:center }
+  .demo-info h3 { font-size:24px; margin-bottom:12px }
+  .demo-info p { color:#94a3b8; margin-bottom:24px; font-size:16px }
+  .demo-info .contact-item { display:flex; align-items:center; gap:12px; margin-bottom:12px; color:#cbd5e1 }
+  .demo-form { background:#1e293b; border-radius:16px; padding:32px }
+  .demo-form input, .demo-form textarea { width:100%; padding:14px 16px; border-radius:10px; border:1px solid #334155; background:#0f172a; color:#fff; font-size:15px; margin-bottom:12px; outline:none; font-family:inherit }
+  .demo-form input:focus, .demo-form textarea:focus { border-color:#dc2626 }
+  .demo-form textarea { min-height:100px; resize:vertical }
+  .demo-form .msg { padding:10px; border-radius:8px; margin-bottom:12px; font-size:14px; display:none }
+  .demo-form .msg.success { display:block; background:#16a34a22; color:#16a34a; border:1px solid #16a34a44 }
+  .demo-form .msg.error { display:block; background:#dc262622; color:#ef4444; border:1px solid #dc262644 }
+  @media (max-width:768px) { .demo-grid { grid-template-columns:1fr } }
+
+  /* FAQ */
+  .faq-item { border-bottom:1px solid #e2e8f0; padding:20px 0 }
+  .faq-item summary { font-weight:700; font-size:17px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center }
+  .faq-item summary::after { content:"+"; font-size:24px; color:#dc2626; transition:.2s }
+  .faq-item[open] summary::after { content:"−" }
+  .faq-item p { color:#64748b; padding-top:12px; font-size:15px }
+
+  /* Footer */
+  footer { background:#0f172a; color:#94a3b8; padding:40px 0 }
+  footer .container { display:flex; justify-content:space-between; flex-wrap:wrap; gap:24px }
+  footer a { color:#cbd5e1; text-decoration:none }
+  footer a:hover { color:#fff }
+
+  /* WhatsApp float */
+  .whatsapp-float { position:fixed; bottom:24px; right:24px; z-index:200; width:56px; height:56px; border-radius:50%; background:#25D366; box-shadow:0 4px 16px rgba(37,211,102,.4); display:flex; align-items:center; justify-content:center; transition:.2s; text-decoration:none }
+  .whatsapp-float:hover { transform:scale(1.1) }
+  .whatsapp-float svg { width:28px; height:28px; fill:#fff }
+
+  @keyframes fadeIn { from { opacity:0; transform:translateY(20px) } to { opacity:1; transform:translateY(0) } }
+  .animate { animation:fadeIn .6s ease-out }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="container">
+    <a href="/" class="logo">🍽️ Comanda</a>
+    <div class="links">
+      <a href="#como-funciona">Cómo funciona</a>
+      <a href="#planes">Planes</a>
+      <a href="#demo">Demo</a>
+      <a href="#faq">FAQ</a>
+      <a href="/app" class="btn btn-outline" style="padding:10px 20px;font-size:14px">Iniciar sesión</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="inicio">
+  <div class="container">
+    <h1>Digitaliza tu restaurante <span>en minutos</span></h1>
+    <p>POS · Cocina · Meseros · Reportería — todo integrado en una sola plataforma. Sin papel, sin caos.</p>
+    <div class="cta">
+      <a href="#demo" class="btn btn-primary">Solicitar demo gratis</a>
+      <a href="#planes" class="btn btn-outline">Ver planes</a>
+    </div>
+    <div class="email-capture" id="hero-email">
+      <input type="email" id="quick-email" placeholder="tu@email.com" aria-label="Email">
+      <button class="btn btn-primary" onclick="quickLead()">Te contactamos →</button>
+    </div>
+    <p id="quick-msg" style="margin-top:12px;font-size:14px"></p>
+  </div>
+</section>
+
+<!-- CÓMO FUNCIONA -->
+<section id="como-funciona">
+  <div class="container">
+    <h2>Cómo funciona</h2>
+    <p class="subtitle">Tres pasos. Sin instalación. Sin servidores.</p>
+    <div class="steps">
+      <div class="step-card animate">
+        <div class="num">1</div>
+        <h3>🍽️ El mesero toma la orden</h3>
+        <p>Desde su celular o tablet. Combos personalizables. Se envía directo a caja.</p>
+      </div>
+      <div class="step-card animate">
+        <div class="num">2</div>
+        <h3>👨‍🍳 Cocina recibe al instante</h3>
+        <p>Pantalla táctil con colores por tiempo. Sonido en nuevas órdenes. Sin papel.</p>
+      </div>
+      <div class="step-card animate">
+        <div class="num">3</div>
+        <h3>💰 Caja cobra y cierra</h3>
+        <p>Balance en tiempo real. Cierre de turno con verificación automática. Reportes listos.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FUNCIONALIDADES -->
+<section style="background:#f8fafc">
+  <div class="container">
+    <h2>Todo lo que necesitas</h2>
+    <p class="subtitle">Una plataforma, todas las herramientas.</p>
+    <div class="features">
+      <div class="feature"><div class="icon">🛒</div><h3>POS Punto de Venta</h3><p>Cobra en efectivo, tarjeta o transferencia. Tracking en vivo de todas las órdenes del día.</p></div>
+      <div class="feature"><div class="icon">👨‍🍳</div><h3>KDS Pantalla de Cocina</h3><p>Órdenes en tiempo real. Colores por antigüedad. Sonido de notificación.</p></div>
+      <div class="feature"><div class="icon">🤵</div><h3>Panel de Meseros</h3><p>Toma órdenes con combos. Envía a caja. Recibe notificación cuando está listo.</p></div>
+      <div class="feature"><div class="icon">📊</div><h3>Dashboard Admin</h3><p>KPIs en tiempo real. Ventas, órdenes, ticket promedio. Todo en una pantalla.</p></div>
+      <div class="feature"><div class="icon">📈</div><h3>Reportes y Estadísticas</h3><p>Ventas diarias, semanales, top productos. Gráficos interactivos. Descarga CSV.</p></div>
+      <div class="feature"><div class="icon">🏢</div><h3>Multi-restaurante</h3><p>Administra varias sucursales desde un solo panel SuperAdmin. Cada una con sus propios usuarios.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- PLANES -->
+<section id="planes">
+  <div class="container">
+    <h2>Planes simples, sin sorpresas</h2>
+    <p class="subtitle">Elige el que se ajuste a tu restaurante. Cambia en cualquier momento.</p>
+    <div class="plans">
+      <div class="plan-card">
+        <h3>FREE</h3>
+        <p style="color:#64748b;font-size:14px">Para empezar</p>
+        <div class="price">$0<span>/mes</span></div>
+        <ul class="features-list">
+          <li>3 usuarios</li>
+          <li>50 productos</li>
+          <li>5 combos</li>
+          <li>POS + Cocina + Mesero</li>
+          <li>Dashboard básico</li>
+        </ul>
+        <a href="/app" class="btn btn-outline" style="width:100%;justify-content:center">Comenzar gratis</a>
+      </div>
+      <div class="plan-card featured">
+        <h3>BASIC</h3>
+        <p style="color:#64748b;font-size:14px">Restaurante pequeño</p>
+        <div class="price">$29<span>/mes</span></div>
+        <ul class="features-list">
+          <li>7 usuarios</li>
+          <li>200 productos</li>
+          <li>20 combos</li>
+          <li>Delivery incluido</li>
+          <li>Reportes básicos</li>
+        </ul>
+        <a href="#demo" class="btn btn-primary" style="width:100%;justify-content:center">Solicitar demo</a>
+      </div>
+      <div class="plan-card">
+        <h3>PRO</h3>
+        <p style="color:#64748b;font-size:14px">Restaurante mediano</p>
+        <div class="price">$59<span>/mes</span></div>
+        <ul class="features-list">
+          <li>20 usuarios</li>
+          <li>Productos ilimitados</li>
+          <li>Combos ilimitados</li>
+          <li>Delivery + Reportes avanzados</li>
+          <li>Soporte prioritario</li>
+        </ul>
+        <a href="#demo" class="btn btn-outline" style="width:100%;justify-content:center">Hablar con ventas</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIOS -->
+<section>
+  <div class="container">
+    <h2>Lo que dicen nuestros clientes</h2>
+    <p class="subtitle">Restaurantes que ya confían en Comanda.</p>
+    <div class="testimonials">
+      <div class="testimonial">
+        <div class="stars">★★★★★</div>
+        <p>"Desde que usamos Comanda, el tiempo de entrega bajó a la mitad. La cocina ya no pierde papelitos."</p>
+        <div class="author">María Salazar</div>
+        <div class="role">Cajera — El Sabor Criollo</div>
+      </div>
+      <div class="testimonial">
+        <div class="stars">★★★★★</div>
+        <p>"Mis meseros toman pedidos desde el celular. Caja ve todo en tiempo real. Increíble lo fácil que es."</p>
+        <div class="author">Willie Rodríguez</div>
+        <div class="role">Dueño — Willie's Parrilla</div>
+      </div>
+      <div class="testimonial">
+        <div class="stars">★★★★★</div>
+        <p>"Los reportes me ayudan a saber qué se vende más. Antes lo hacía a ojo. Ahora tengo datos reales."</p>
+        <div class="author">Carlos Menéndez</div>
+        <div class="role">Admin — Sabor Restaurant</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DEMO -->
+<section class="demo-section" id="demo">
+  <div class="container">
+    <div class="demo-grid">
+      <div class="demo-info">
+        <h2 style="text-align:left;margin-bottom:24px">Solicita tu demo gratuita</h2>
+        <p>Te mostramos cómo Comanda puede transformar tu restaurante en una demo personalizada de 15 minutos.</p>
+        <div class="contact-item">📧 contacto@comanda.one</div>
+        <div class="contact-item">📱 +593 98 765 4321</div>
+        <div style="margin-top:24px">
+          <a href="https://wa.me/593987654321" class="btn btn-white" target="_blank" rel="noopener">💬 Escríbenos por WhatsApp</a>
+        </div>
+      </div>
+      <form class="demo-form" id="demo-form" onsubmit="submitDemo(event)">
+        <input type="text" id="name" placeholder="Tu nombre completo *" required>
+        <input type="text" id="restaurant" placeholder="Nombre de tu restaurante">
+        <input type="email" id="email" placeholder="tu@email.com *" required>
+        <input type="tel" id="phone" placeholder="Teléfono">
+        <textarea id="message" placeholder="Cuéntanos sobre tu restaurante..."></textarea>
+        <div class="msg" id="form-msg"></div>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center">Enviar solicitud</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+  <div class="container">
+    <h2>Preguntas frecuentes</h2>
+    <p class="subtitle">Respuestas rápidas a dudas comunes.</p>
+    <div style="max-width:700px;margin:0 auto">
+      <details class="faq-item">
+        <summary>¿Necesito instalar algo en mi restaurante?</summary>
+        <p>No. Comanda funciona 100% en la web. Solo necesitas una tablet, celular o computadora con internet.</p>
+      </details>
+      <details class="faq-item">
+        <summary>¿Cuánto tiempo toma configurarlo?</summary>
+        <p>Con nuestro equipo te ayudamos a dejar todo listo en menos de 2 horas: productos, combos, usuarios y mesas.</p>
+      </details>
+      <details class="faq-item">
+        <summary>¿Puedo probarlo sin pagar?</summary>
+        <p>Sí. El plan FREE es para siempre. Si necesitas más capacidad, el plan BASIC empieza en $29/mes.</p>
+      </details>
+      <details class="faq-item">
+        <summary>¿Funciona sin internet?</summary>
+        <p>Por ahora requiere conexión a internet. Estamos trabajando en modo offline para futuras versiones.</p>
+      </details>
+      <details class="faq-item">
+        <summary>¿Qué pasa si quiero cancelar?</summary>
+        <p>Cancelas cuando quieras, sin penalización. Tus datos se exportan antes de cerrar la cuenta.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div>
+      <p style="font-size:20px;font-weight:800;color:#fff">🍽️ Comanda</p>
+      <p style="margin-top:8px">Gestión inteligente para restaurantes.</p>
+    </div>
+    <div>
+      <p style="font-weight:700;color:#fff;margin-bottom:8px">Producto</p>
+      <p><a href="#como-funciona">Cómo funciona</a></p>
+      <p><a href="#planes">Planes</a></p>
+      <p><a href="#demo">Demo</a></p>
+    </div>
+    <div>
+      <p style="font-weight:700;color:#fff;margin-bottom:8px">Soporte</p>
+      <p><a href="#faq">FAQ</a></p>
+      <p><a href="mailto:contacto@comanda.one">contacto@comanda.one</a></p>
+      <p><a href="https://wa.me/593987654321" target="_blank" rel="noopener">WhatsApp</a></p>
+    </div>
+    <div>
+      <p style="font-weight:700;color:#fff;margin-bottom:8px">Legal</p>
+      <p><a href="#">Términos de servicio</a></p>
+      <p><a href="#">Privacidad</a></p>
+      <p style="color:#64748b;margin-top:12px;font-size:13px">© 2026 Comanda</p>
+    </div>
+  </div>
+</footer>
+
+<!-- WhatsApp float -->
+<a href="https://wa.me/593987654321" class="whatsapp-float" target="_blank" rel="noopener" title="Chatea con nosotros" aria-label="WhatsApp">
+  <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+</a>
+
+<script>
+async function submitDemo(e) {
+  e.preventDefault();
+  const msg = document.getElementById('form-msg');
+  const btn = e.target.querySelector('button');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+  msg.className = 'msg';
+  msg.style.display = 'none';
+  try {
+    const res = await fetch('/api/leads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: document.getElementById('name').value,
+        restaurant: document.getElementById('restaurant').value || undefined,
+        email: document.getElementById('email').value,
+        phone: document.getElementById('phone').value || undefined,
+        message: document.getElementById('message').value || undefined,
+      })
+    });
+    if (!res.ok) throw new Error('Error');
+    msg.className = 'msg success';
+    msg.textContent = '¡Recibido! Te contactaremos en las próximas 24 horas.';
+    msg.style.display = 'block';
+    e.target.reset();
+  } catch {
+    msg.className = 'msg error';
+    msg.textContent = 'Error al enviar. Intenta de nuevo.';
+    msg.style.display = 'block';
+  }
+  btn.disabled = false;
+  btn.textContent = 'Enviar solicitud';
+}
+
+async function quickLead() {
+  const email = document.getElementById('quick-email').value;
+  const msg = document.getElementById('quick-msg');
+  if (!email || !email.includes('@')) { msg.textContent = 'Ingresa un email válido'; msg.style.color = '#ef4444'; return }
+  try {
+    const res = await fetch('/api/leads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Landing', email, source: 'hero' })
+    });
+    if (!res.ok) throw new Error('Error');
+    msg.textContent = '✅ ¡Gracias! Te escribiremos pronto.';
+    msg.style.color = '#16a34a';
+    document.getElementById('quick-email').value = '';
+  } catch {
+    msg.textContent = 'Error. Intenta de nuevo.';
+    msg.style.color = '#ef4444';
+  }
+}
+</script>
+</body>
+</html>

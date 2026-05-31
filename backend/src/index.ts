@@ -21,6 +21,7 @@ import deliveryRoutes from "./routes/delivery";
 import settingsRoutes from "./routes/settings";
 import superadminRoutes from "./routes/superadmin";
 import plansRoutes from "./routes/plans";
+import leadsRoutes from "./routes/leads";
 
 export const prisma = new PrismaClient();
 
@@ -59,14 +60,31 @@ app.use("/api/reports", reportRoutes);
 app.use("/api/delivery", deliveryRoutes);
 app.use("/api/restaurant", settingsRoutes);
 app.use("/api/superadmin", superadminRoutes);
+app.use("/api/leads", leadsRoutes);
 
-// ─── Static Files (Frontend Build) ─────────────────────────
+// ─── Static paths ─────────────────────────────────────────
 const publicPath = path.join(__dirname, "..", "..", "public");
-app.use(express.static(publicPath, {
+
+// ─── Landing Page ──────────────────────────────────────────
+app.get("/", (_req, res) => {
+  res.sendFile(path.join(publicPath, "landing.html"));
+});
+
+// ─── App — React SPA under /app ───────────────────────────
+const appPath = path.join(publicPath, "app");
+app.use("/app", express.static(appPath, {
   maxAge: "1y",
   immutable: true,
   index: false,
 }));
+
+app.get("/app/*", (_req, res) => {
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.sendFile(path.join(appPath, "index.html"));
+});
+
+// ─── Static Assets & legacy redirect to /app ───────────────
+app.use(express.static(publicPath, { maxAge: "1y", immutable: true, index: false }));
 
 // index.html — no cache (Express 5 compatible catch-all)
 app.get("/{*path}", (_req, res) => {
