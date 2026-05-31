@@ -22,7 +22,7 @@ const createOrderSchema = ordZ.object({
     quantity: ordZ.number().int().positive(),
     unitPrice: ordZ.number().nonnegative(),
     notes: ordZ.string().optional(),
-    kitchen: ordZ.enum(["KITCHEN_1", "KITCHEN_2", "BAR", "BOTH", "NONE"]),
+    kitchen: ordZ.enum(["KITCHEN_1", "NONE"]),
     modifiers: ordZ.array(ordZ.object({
       modifierId: ordZ.string(),
       name: ordZ.string(),

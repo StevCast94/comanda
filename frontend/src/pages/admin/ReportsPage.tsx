@@ -6,7 +6,7 @@ import {
 } from "recharts";
 import {
   Calendar, TrendingUp, Award, Clock, Loader2,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, Download,
 } from "lucide-react";
 import type { DailySummary } from "../../types";
 
@@ -216,6 +216,15 @@ export default function ReportsPage() {
           <h3 className="mb-3 text-sm font-medium text-text-muted">Top 10 productos (últimos 30 días)</h3>
           {topProducts.length > 0 ? (
             <>
+              <div className="mb-3 flex justify-end">
+                <button onClick={() => {
+                  const csv = "Producto,Categoría,Cantidad,Ingresos\n" + topProducts.map(p => `"${p.name}","${p.category}",${p.quantity},${p.revenue.toFixed(2)}`).join("\n");
+                  const blob = new Blob([csv], { type: "text/csv" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a"); a.href = url; a.download = "top-productos-comanda.csv"; a.click();
+                  URL.revokeObjectURL(url);
+                }} className="btn btn-ghost gap-1 text-xs text-info"><Download className="h-3.5 w-3.5" />Descargar CSV</button>
+              </div>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={topProducts} layout="vertical" margin={{ left: 80 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
