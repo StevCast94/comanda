@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
-// Time color thresholds (minutes)
 const TIME_GREEN = 3;
 const TIME_YELLOW = 6;
 
@@ -42,7 +41,6 @@ export default function KDSPage() {
   const prevCountRef = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Unified KDS — all kitchen items in one screen
   const { data, error, loading, refresh } = usePolling(
     () => api.kitchen.orders(undefined, "PENDING,PREPARING"),
     { interval: 5000 }
@@ -50,7 +48,6 @@ export default function KDSPage() {
 
   const orders: KDSOrder[] = data?.orders || [];
 
-  // Play sound on new orders
   useEffect(() => {
     const count = orders.length;
     if (count > prevCountRef.current && soundEnabled && prevCountRef.current > 0) {
@@ -64,53 +61,39 @@ export default function KDSPage() {
     prevCountRef.current = count;
   }, [orders.length, soundEnabled]);
 
-  // Update item status
   const handleUpdateStatus = useCallback(async (itemId: string, newStatus: "PREPARING" | "READY") => {
     setUpdatingItem(itemId);
-    try {
-      await api.kitchen.updateItemStatus(itemId, newStatus);
-      await refresh();
-    } catch { /* error handled by polling */ }
+    try { await api.kitchen.updateItemStatus(itemId, newStatus); await refresh(); }
+    catch { /* error handled by polling */ }
     setUpdatingItem(null);
   }, [refresh]);
 
-  // Mark all items in an order
   const handleMarkAllReady = useCallback(async (items: OrderItem[]) => {
     const pending = items.filter((i) => i.status !== "READY");
-    for (const item of pending) {
-      await api.kitchen.updateItemStatus(item.id, "READY");
-    }
+    for (const item of pending) await api.kitchen.updateItemStatus(item.id, "READY");
     await refresh();
   }, [refresh]);
-
-  // Separate into PENDING and PREPARING
-  const newOrders = orders.filter((o) => o.items.some((i) => i.status === "PENDING"));
-  const inProgress = orders.filter((o) => o.items.every((i) => i.status === "PREPARING"));
 
   return (
     <div className="flex h-screen flex-col bg-surface">
       {/* Header */}
-      <header className="flex items-center justify-between border-b border-border bg-surface-2 px-4 py-3">
+      <header className="flex items-center justify-between border-b border-border bg-surface-2 px-5 py-4">
         <div className="flex items-center gap-3">
-          <ChefHat className="h-6 w-6 text-accent" />
-          <h1 className="text-lg font-bold text-text">Cocina</h1>
-          {error ? (
-            <WifiOff className="h-4 w-4 text-danger" />
-          ) : (
-            <Wifi className="h-4 w-4 text-accent" />
-          )}
+          <ChefHat className="h-7 w-7 text-accent" />
+          <h1 className="text-xl font-bold text-text">Cocina</h1>
+          {error ? <WifiOff className="h-5 w-5 text-danger" /> : <Wifi className="h-5 w-5 text-accent" />}
         </div>
-        <div className="flex items-center gap-2">
-          <span className="rounded-full bg-accent/10 px-3 py-1 text-sm font-bold text-accent">
+        <div className="flex items-center gap-3">
+          <span className="rounded-full bg-accent/10 px-4 py-1.5 text-base font-bold text-accent">
             {orders.length} orden{orders.length !== 1 ? "es" : ""}
           </span>
           <button onClick={() => setSoundEnabled(!soundEnabled)} className="btn btn-ghost p-2">
-            {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4 text-text-muted" />}
+            {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5 text-text-muted" />}
           </button>
           <button onClick={() => refresh()} className="btn btn-ghost p-2">
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`h-5 w-5 ${loading ? "animate-spin" : ""}`} />
           </button>
-          <button onClick={logout} className="btn btn-ghost p-2"><LogOut className="h-4 w-4" /></button>
+          <button onClick={logout} className="btn btn-ghost p-2"><LogOut className="h-5 w-5" /></button>
         </div>
       </header>
 
@@ -118,9 +101,9 @@ export default function KDSPage() {
       <div className="flex-1 overflow-y-auto p-4">
         {orders.length === 0 && !loading && (
           <div className="flex h-full flex-col items-center justify-center text-text-muted">
-            <ChefHat className="mb-4 h-16 w-16 opacity-20" />
-            <p className="text-xl">Sin órdenes pendientes</p>
-            <p className="mt-1 text-sm">Las nuevas órdenes aparecerán aquí automáticamente</p>
+            <ChefHat className="mb-4 h-20 w-20 opacity-20" />
+            <p className="text-2xl font-bold">Sin órdenes pendientes</p>
+            <p className="mt-2 text-base">Las nuevas órdenes aparecerán aquí automáticamente</p>
           </div>
         )}
 
@@ -128,7 +111,6 @@ export default function KDSPage() {
           {orders.map((kdsOrder) => {
             const mins = minutesAgo(kdsOrder.order.createdAt);
             const colorClass = getTimeColor(mins);
-            const allPreparing = kdsOrder.items.every((i) => i.status === "PREPARING");
             const hasNew = kdsOrder.items.some((i) => i.status === "PENDING");
 
             return (
@@ -137,94 +119,92 @@ export default function KDSPage() {
                 className={`rounded-xl border-2 ${colorClass} ${hasNew ? "pulse-new" : ""} overflow-hidden`}
               >
                 {/* Ticket header */}
-                <div className={`flex items-center justify-between px-4 py-2 ${getTimeBg(mins)}`}>
+                <div className={`flex items-center justify-between px-4 py-3 ${getTimeBg(mins)}`}>
                   <div className="flex items-center gap-2">
-                    <span className="text-lg font-bold text-white">
-                      #{kdsOrder.order.orderNumber}
-                    </span>
+                    <span className="text-2xl font-bold text-white">#{kdsOrder.order.orderNumber}</span>
                     {kdsOrder.order.table && (
-                      <span className="rounded bg-white/20 px-2 py-0.5 text-sm font-medium text-white">
-                        Mesa {kdsOrder.order.table.number}
+                      <span className="rounded bg-white/20 px-3 py-1 text-sm font-bold text-white">
+                        M{kdsOrder.order.table.number}
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 text-white">
-                    <Clock className="h-4 w-4" />
-                    <span className="text-sm font-bold">{formatTime(mins)}</span>
+                  <div className="flex items-center gap-1.5 text-white">
+                    <Clock className="h-5 w-5" />
+                    <span className="text-base font-bold">{formatTime(mins)}</span>
                   </div>
                 </div>
 
-                {/* Items */}
-                <div className="p-3 space-y-2">
-                  {kdsOrder.items.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between gap-2">
+                {/* Items — BIG */}
+                <div className="p-4 space-y-4">
+                  {kdsOrder.items.map((item) => {
+                    const hasSelections = item.comboSelections && Object.keys(item.comboSelections).length > 0;
+                    return (
+                    <div key={item.id} className="flex items-start justify-between gap-3">
                       <div className="flex-1">
-                        <p className="kds-text font-medium text-text">
-                          {item.quantity > 1 && <span className="mr-1 text-accent">{item.quantity}x</span>}
-                          {item.menuItem?.name || item.combo?.name || "Ítem"}
+                        <p className="text-2xl font-extrabold text-text leading-tight">
+                          {item.quantity > 1 && <span className="mr-2 text-accent">{item.quantity}x</span>}
+                          {item.menuItem?.name || item.combo?.name || hasSelections ? "Combo" : "Ítem"}
                         </p>
-                        {/* Combo selections */}
-                        {item.comboSelections && Object.keys(item.comboSelections).length > 0 && (
-                          <div className="mt-0.5 text-[10px] text-text-muted leading-tight">
+                        {/* Combo selections — BIG */}
+                        {hasSelections && (
+                          <div className="mt-2 space-y-1">
                             {Object.entries(item.comboSelections).map(([group, name]) => (
-                              <p key={group} className="flex items-baseline gap-1"><span className="font-medium text-accent/70">{group}:</span> {name as string}</p>
+                              <p key={group} className="flex items-baseline gap-2 text-lg">
+                                <span className="font-extrabold text-accent">{group}:</span>
+                                <span className="font-semibold text-text">{name as string}</span>
+                              </p>
                             ))}
                           </div>
                         )}
                         {/* Modifiers */}
                         {item.modifiers && (item.modifiers as Array<{name: string}>).length > 0 && (
-                          <p className="text-sm text-warning">
+                          <p className="text-base font-medium text-warning mt-1">
                             {(item.modifiers as Array<{name: string}>).map((m) => m.name).join(", ")}
                           </p>
                         )}
                         {/* Notes */}
                         {item.notes && (
-                          <p className="text-sm font-medium text-danger">⚠ {item.notes}</p>
+                          <p className="text-lg font-extrabold text-danger mt-1">⚠ {item.notes}</p>
                         )}
                       </div>
 
-                      {/* Status button */}
+                      {/* Status button — BIG */}
+                      <div className="shrink-0">
                       {item.status === "PENDING" ? (
                         <button
                           onClick={() => handleUpdateStatus(item.id, "PREPARING")}
                           disabled={updatingItem === item.id}
-                          className="btn shrink-0 gap-1 bg-blue-600 px-3 py-2 text-sm text-white hover:opacity-90"
+                          className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-5 py-3.5 text-base font-extrabold text-white hover:opacity-90 min-w-[110px] justify-center"
                         >
-                          {updatingItem === item.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Flame className="h-4 w-4" />
-                          )}
+                          {updatingItem === item.id ? <Loader2 className="h-5 w-5 animate-spin" /> : <Flame className="h-5 w-5" />}
                           Preparar
                         </button>
                       ) : item.status === "PREPARING" ? (
                         <button
                           onClick={() => handleUpdateStatus(item.id, "READY")}
                           disabled={updatingItem === item.id}
-                          className="btn shrink-0 gap-1 bg-warning px-3 py-2 text-sm text-white hover:opacity-90"
+                          className="flex items-center gap-1.5 rounded-xl bg-warning px-5 py-3.5 text-base font-extrabold text-white hover:opacity-90 min-w-[110px] justify-center"
                         >
-                          {updatingItem === item.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Check className="h-4 w-4" />
-                          )}
+                          {updatingItem === item.id ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-5 w-5" />}
                           Listo ✓
                         </button>
                       ) : (
-                        <span className="rounded-lg bg-success/10 px-3 py-2 text-sm text-success">✓ Listo</span>
+                        <span className="inline-flex items-center justify-center rounded-xl bg-success/10 px-5 py-3.5 text-base font-extrabold text-success min-w-[110px]">✓ Listo</span>
                       )}
+                      </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
-                {/* Bulk action */}
+                {/* Bulk action — BIG */}
                 {kdsOrder.items.length > 1 && !kdsOrder.items.every((i) => i.status === "READY") && (
-                  <div className="border-t border-border/30 p-2">
+                  <div className="border-t border-border/30 p-3">
                     <button
                       onClick={() => handleMarkAllReady(kdsOrder.items)}
-                      className="btn btn-primary w-full gap-1 py-2 text-sm"
+                      className="btn btn-primary w-full gap-2 py-3.5 text-lg font-extrabold"
                     >
-                      <Check className="h-4 w-4" />
+                      <Check className="h-5 w-5" />
                       Todo listo
                     </button>
                   </div>
