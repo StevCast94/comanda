@@ -197,13 +197,22 @@ export default function POSPage() {
                   )}
                   <div className="text-xs text-text-muted mb-1 space-y-0.5">
                     {order.items.slice(0, isExpanded ? 99 : 4).map(item => (
-                      <p key={item.id} className={`${isExpanded ? "" : "truncate"}`}>
-                        {item.quantity}x {item.menuItem?.name || (item as any).combo?.name}
-                        {isExpanded && item.notes && <span className="text-warning ml-1">📝 {item.notes}</span>}
-                        {isExpanded && item.modifiers && (item.modifiers as Array<{name:string}>).length > 0 && (
-                          <span className="text-accent ml-1">+{(item.modifiers as Array<{name:string}>).map(m => m.name).join(", ")}</span>
+                      <div key={item.id} className={`${isExpanded ? "" : "truncate"}`}>
+                        <p>
+                          {item.quantity}x {item.menuItem?.name || (item as any).combo?.name}
+                          {isExpanded && item.notes && <span className="text-warning ml-1">📝 {item.notes}</span>}
+                          {isExpanded && item.modifiers && (item.modifiers as Array<{name:string}>).length > 0 && (
+                            <span className="text-accent ml-1">+{(item.modifiers as Array<{name:string}>).map(m => m.name).join(", ")}</span>
+                          )}
+                        </p>
+                        {isExpanded && item.comboSelections && Object.keys(item.comboSelections).length > 0 && (
+                          <div className="mt-0.5 ml-3 text-[10px] text-text-muted leading-tight">
+                            {Object.entries(item.comboSelections).map(([k, v]) => (
+                              <span key={k} className="mr-2"><span className="text-accent/70">{k}:</span> {v as string}</span>
+                            ))}
+                          </div>
                         )}
-                      </p>
+                      </div>
                     ))}
                     {!isExpanded && order.items.length > 4 && (
                       <button onClick={() => setExpandedOrder(order.id)} className="text-accent hover:underline">

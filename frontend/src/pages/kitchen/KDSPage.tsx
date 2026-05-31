@@ -163,6 +163,14 @@ export default function KDSPage() {
                           {item.quantity > 1 && <span className="mr-1 text-accent">{item.quantity}x</span>}
                           {item.menuItem?.name || item.combo?.name || "Ítem"}
                         </p>
+                        {/* Combo selections */}
+                        {item.comboSelections && Object.keys(item.comboSelections).length > 0 && (
+                          <div className="mt-0.5 text-[10px] text-text-muted leading-tight">
+                            {Object.entries(item.comboSelections).map(([group, name]) => (
+                              <p key={group} className="flex items-baseline gap-1"><span className="font-medium text-accent/70">{group}:</span> {name as string}</p>
+                            ))}
+                          </div>
+                        )}
                         {/* Modifiers */}
                         {item.modifiers && (item.modifiers as Array<{name: string}>).length > 0 && (
                           <p className="text-sm text-warning">

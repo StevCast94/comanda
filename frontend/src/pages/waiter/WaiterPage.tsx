@@ -10,7 +10,7 @@ import {
   LogOut, HandPlatter, RefreshCw, CheckCircle, Clock,
   MapPin, Loader2, Wifi, WifiOff, Volume2, VolumeX, Pencil,
   Search, X, ShoppingCart, Minus, Plus, Trash2, StickyNote,
-  UtensilsCrossed, ChevronDown, User,
+  UtensilsCrossed, ChevronDown, User, Eye,
 } from "lucide-react";
 
 function minutesAgo(dateStr: string): number {
@@ -58,7 +58,9 @@ export default function WaiterPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [customerName, setCustomerName] = useState("");
+  const [orderNotes, setOrderNotes] = useState("");
   const [search, setSearch] = useState("");
+  const [showCartPreview, setShowCartPreview] = useState(false);
   const [orderLoading, setOrderLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [successOrder, setSuccessOrder] = useState<number | null>(null);
@@ -153,7 +155,7 @@ export default function WaiterPage() {
     setCart(cart.map(c => c.tempId === tempId ? { ...c, notes } : c));
   };
 
-  const clearAll = () => { setCart([]); setSelectedTable(null); setCustomerName(""); };
+  const clearAll = () => { setCart([]); setSelectedTable(null); setCustomerName(""); setOrderNotes(""); };
 
   const totals = (() => {
     const subtotal = cart.reduce((s, i) => { const m = i.modifiers.reduce((sm, mm) => sm + mm.priceAdjustment, 0); return s + (i.unitPrice + m) * i.quantity; }, 0);
@@ -172,6 +174,7 @@ export default function WaiterPage() {
         customerName: customerName || undefined,
         orderType: "DINE_IN",
         status: "PENDING",
+        notes: orderNotes || undefined,
         items: cart.map(c => ({
           menuItemId: c.menuItemId,
           comboId: c.comboId,
@@ -436,11 +439,13 @@ export default function WaiterPage() {
               )}
             </div>
 
-            {/* Bottom bar: table + cart summary + send */}
+            {/* Bottom bar: customer + notes + table + send */}
             <div className="border-t border-border bg-surface-2 px-2 py-2 space-y-1.5">
               <div className="flex gap-1.5 items-center">
                 <User className="h-4 w-4 text-text-muted shrink-0" />
                 <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Cliente" className="flex-1 bg-surface border border-border rounded-lg px-2 py-1.5 text-sm text-text outline-none focus:border-accent" />
+                <StickyNote className="h-4 w-4 text-text-muted shrink-0" />
+                <input type="text" value={orderNotes} onChange={e => setOrderNotes(e.target.value)} placeholder="Observación" className="flex-1 bg-surface border border-border rounded-lg px-2 py-1.5 text-sm text-text outline-none focus:border-accent" />
                 <span className="text-xs text-text-muted shrink-0">{cart.length} items</span>
               </div>
               <div className="flex gap-1.5">
@@ -454,6 +459,12 @@ export default function WaiterPage() {
                     <option key={t.id} value={t.id}>Mesa {t.number} ({t.floor})</option>
                   ))}
                 </select>
+                {cart.length > 0 && (
+                  <button onClick={() => setShowCartPreview(true)}
+                    className="btn btn-ghost px-3 py-2 text-xs text-info border border-info/20 shrink-0">
+                    <Eye className="h-3.5 w-3.5 inline mr-1" />Ver pedido
+                  </button>
+                )}
                 <button onClick={submitWaiterOrder} disabled={submitting || !selectedTable || cart.length === 0}
                   className="btn btn-primary px-4 py-2 text-sm font-bold disabled:opacity-40 shrink-0">
                   {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <>${totals.total.toFixed(0)} — Enviar</>}
@@ -614,6 +625,77 @@ export default function WaiterPage() {
             </div>
           </div>
         </>
+      )}
+
+      {/* Cart preview modal (mobile) */}
+      {showCartPreview && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-surface lg:hidden" onClick={() => setShowCartPreview(false)}>
+          <div className="flex items-center justify-between border-b border-border bg-surface-2 px-4 py-3" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-text flex items-center gap-2"><ShoppingCart className="h-5 w-5 text-accent" />Tu pedido ({cart.length} items)</h3>
+            <button onClick={() => setShowCartPreview(false)} className="btn btn-ghost p-1.5"><X className="h-5 w-5" /></button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4" onClick={e => e.stopPropagation()}>
+            {customerName && <p className="mb-3 text-sm text-text-muted"><User className="h-3.5 w-3.5 inline mr-1" />{customerName}</p>}
+            {selectedTable && <p className="mb-3 text-sm text-text-muted"><MapPin className="h-3.5 w-3.5 inline mr-1" />Mesa {selectedTable.number} ({selectedTable.floor})</p>}
+            {orderNotes && <p className="mb-3 text-sm text-warning"><StickyNote className="h-3.5 w-3.5 inline mr-1" />{orderNotes}</p>}
+            <div className="space-y-2">
+              {cart.map(item => {
+                const modTotal = item.modifiers.reduce((s: number, m: any) => s + m.priceAdjustment, 0);
+                const lineTotal = (item.unitPrice + modTotal) * item.quantity;
+                return (
+                  <div key={item.tempId} className="rounded-lg bg-surface-2 p-3 border border-border">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-text">{item.name}</p>
+                        {item.comboSelections && Object.keys(item.comboSelections).length > 0 && (
+                          <div className="mt-1 text-xs text-text-muted space-y-0.5">
+                            {Object.entries(item.comboSelections).map(([k, v]) => (
+                              <p key={k}><span className="text-accent/70">{k}:</span> {v as string}</p>
+                            ))}
+                          </div>
+                        )}
+                        {item.modifiers.length > 0 && <p className="text-xs text-accent">{item.modifiers.map((m: any) => `+${m.name}`).join(", ")}</p>}
+                        {item.notes && <p className="text-xs text-warning">📝 {item.notes}</p>}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-bold text-text">${lineTotal.toFixed(2)}</p>
+                        <div className="flex items-center gap-1 mt-1">
+                          <button onClick={() => updateQty(item.tempId, -1)} className="btn btn-ghost p-0.5 h-6 w-6"><Minus className="h-3 w-3" /></button>
+                          <span className="text-xs font-medium">{item.quantity}</span>
+                          <button onClick={() => updateQty(item.tempId, 1)} className="btn btn-ghost p-0.5 h-6 w-6"><Plus className="h-3 w-3" /></button>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-1 mt-2">
+                      <button onClick={() => { setEditingNotes(editingNotes === item.tempId ? null : item.tempId); }} className={`btn btn-ghost p-1.5 text-xs ${item.notes ? "text-warning" : "text-text-muted"}`}><StickyNote className="h-3.5 w-3.5" /> Nota</button>
+                      <button onClick={() => removeItem(item.tempId)} className="btn btn-ghost p-1.5 text-xs text-danger"><Trash2 className="h-3.5 w-3.5" /> Quitar</button>
+                    </div>
+                    {editingNotes === item.tempId && (
+                      <div className="mt-2 flex gap-1">
+                        <input type="text" value={item.notes} onChange={e => updNotes(item.tempId, e.target.value)} placeholder="Ej: sin cebolla..." className="flex-1 rounded-lg border border-border bg-surface px-2 py-1.5 text-xs text-text outline-none focus:border-accent" autoFocus />
+                        <button onClick={() => setEditingNotes(null)} className="btn btn-ghost p-1.5"><X className="h-3.5 w-3.5" /></button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className="border-t border-border bg-surface-2 p-4" onClick={e => e.stopPropagation()}>
+            <div className="mb-3 space-y-1 text-sm">
+              <div className="flex justify-between text-text-muted"><span>Subtotal</span><span>${totals.subtotal.toFixed(2)}</span></div>
+              <div className="flex justify-between text-text-muted"><span>IVA 15%</span><span>${totals.tax.toFixed(2)}</span></div>
+              <div className="flex justify-between text-text-muted"><span>Servicio 10%</span><span>${totals.svc.toFixed(2)}</span></div>
+              <div className="flex justify-between border-t border-border pt-1 text-base font-bold text-text"><span>TOTAL</span><span className="text-accent">${totals.total.toFixed(2)}</span></div>
+            </div>
+            <button onClick={() => { setShowCartPreview(false); submitWaiterOrder(); }} disabled={submitting || !selectedTable}
+              className="btn btn-primary w-full gap-2 py-3 text-base">
+              {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <UtensilsCrossed className="h-5 w-5" />}
+              Enviar orden a caja
+            </button>
+            <button onClick={() => setShowCartPreview(false)} className="btn btn-ghost mt-2 w-full text-sm text-text-muted">Seguir editando</button>
+          </div>
+        </div>
       )}
 
       {/* Combo Modal */}
