@@ -54,6 +54,7 @@ export default function WaiterPage() {
   const [products, setProducts] = useState<MenuItem[]>([]);
   const [combos, setCombos] = useState<Combo[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
+  const [occupiedTables, setOccupiedTables] = useState<Set<string>>(new Set());
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
@@ -85,6 +86,15 @@ export default function WaiterPage() {
       } catch { /* ignore */ }
       setOrderLoading(false);
     })();
+    // Poll occupied tables
+    const t = setInterval(async () => {
+      try {
+        const { orders } = await api.orders.list({ status: "PENDING,PAID,PREPARING,READY", limit: 100 });
+        const occupied = new Set((orders || []).filter((o: any) => o.tableId).map((o: any) => o.tableId));
+        setOccupiedTables(occupied);
+      } catch {}
+    }, 15000);
+    return () => clearInterval(t);
   }, []);
 
   const filteredProducts = (() => {
@@ -461,7 +471,7 @@ export default function WaiterPage() {
                 >
                   <option value="">Seleccionar mesa</option>
                   {tables.map(t => (
-                    <option key={t.id} value={t.id}>Mesa {t.number} ({t.floor})</option>
+                    <option key={t.id} value={t.id}>{occupiedTables.has(t.id) ? "🔴" : "🟢"} Mesa {t.number} ({t.floor}){occupiedTables.has(t.id) ? " — Ocupada" : ""}</option>
                   ))}
                 </select>
                 {cart.length > 0 && (

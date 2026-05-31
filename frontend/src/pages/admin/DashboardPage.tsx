@@ -493,6 +493,7 @@ function ConfigPanel() {
   const [msg, setMsg] = useState("");
   const [info, setInfo] = useState({
     name: "", address: "", phone: "", timezone: "America/Guayaquil", currency: "USD",
+    taxRate: 15, serviceRate: 10,
   });
 
   useEffect(() => {
@@ -500,12 +501,15 @@ function ConfigPanel() {
       try {
         const res = await api.settings.restaurant();
         const r = (res as any).restaurant || res;
+        const s = r.settings || {};
         setInfo({
           name: r.name || "",
           address: r.address || "",
           phone: r.phone || "",
           timezone: r.timezone || "America/Guayaquil",
           currency: r.currency || "USD",
+          taxRate: s.taxRate ? s.taxRate * 100 : 15,
+          serviceRate: s.serviceRate ? s.serviceRate * 100 : 10,
         });
       } catch {}
       setLoading(false);
@@ -515,10 +519,12 @@ function ConfigPanel() {
   async function handleSave() {
     setSaving(true); setMsg("");
     try {
-      await api.settings.updateInfo(info);
-      setMsg("? Configuraci�n guardada");
+      const infoData = { name: info.name, address: info.address, phone: info.phone, timezone: info.timezone, currency: info.currency };
+      await api.settings.updateInfo(infoData);
+      await api.settings.updateSettings({ taxRate: info.taxRate / 100, serviceRate: info.serviceRate / 100 });
+      setMsg("✅ Configuración guardada");
     } catch (e: any) {
-      setMsg("? Error: " + (e.message || "desconocido"));
+      setMsg("❌ Error: " + (e.message || "desconocido"));
     }
     setSaving(false);
     setTimeout(() => setMsg(""), 3000);
@@ -539,12 +545,12 @@ function ConfigPanel() {
               value={info.name} onChange={e => setInfo({...info, name: e.target.value})} />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-text-muted">Direcci�n</label>
+            <label className="mb-1 block text-xs text-text-muted">Dirección</label>
             <input className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-accent"
               value={info.address} onChange={e => setInfo({...info, address: e.target.value})} />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-text-muted">Tel�fono</label>
+            <label className="mb-1 block text-xs text-text-muted">Teléfono</label>
             <input className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-accent"
               value={info.phone} onChange={e => setInfo({...info, phone: e.target.value})} />
           </div>
@@ -565,21 +571,32 @@ function ConfigPanel() {
             </div>
           </div>
         </div>
-
-        {msg && <div className={`mt-3 rounded-lg px-3 py-2 text-sm ${msg.startsWith("?") ? "bg-success/10 text-success" : "bg-danger/10 text-danger"}`}>{msg}</div>}
-
-        <button onClick={handleSave} disabled={saving} className="btn btn-primary w-full mt-4 gap-2">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          Guardar Cambios
-        </button>
       </div>
 
       <div className="rounded-xl border border-border bg-surface-2 p-5">
-        <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-text">
+        <h3 className="mb-4 flex items-center gap-2 text-sm font-bold text-text">
           <DollarSign className="h-4 w-4 text-warning" /> Impuestos y Servicio
         </h3>
-        <p className="text-xs text-text-muted">Configurable pr�ximamente � actualmente IVA 15%, Servicio 10%.</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1 block text-xs text-text-muted">IVA (%)</label>
+            <input type="number" step="0.1" min="0" className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-accent"
+              value={info.taxRate} onChange={e => setInfo({...info, taxRate: Number(e.target.value)})} />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-text-muted">Servicio (%)</label>
+            <input type="number" step="0.1" min="0" className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-accent"
+              value={info.serviceRate} onChange={e => setInfo({...info, serviceRate: Number(e.target.value)})} />
+          </div>
+        </div>
       </div>
+
+      {msg && <div className={`rounded-lg px-3 py-2 text-sm ${msg.startsWith("✅") ? "bg-success/10 text-success" : "bg-danger/10 text-danger"}`}>{msg}</div>}
+
+      <button onClick={handleSave} disabled={saving} className="btn btn-primary w-full gap-2 py-3">
+        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+        Guardar Cambios
+      </button>
     </div>
   );
 }

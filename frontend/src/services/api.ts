@@ -243,6 +243,8 @@ export const settings = {
   restaurant: () => request<{ restaurant: import("../types").Restaurant & { address?: string | null; phone?: string | null; timezone?: string; currency?: string } }>("/restaurant/settings"),
   updateInfo: (data: { name?: string; address?: string; phone?: string; timezone?: string; currency?: string }) =>
     request<any>("/restaurant/info", { method: "PATCH", body: JSON.stringify(data) }),
+  updateSettings: (settings: Record<string, unknown>) =>
+    request<any>("/restaurant/settings", { method: "PUT", body: JSON.stringify({ settings }) }),
   addTable: (number: number, floor: string) =>
     request<any>("/restaurant/tables", {
       method: "POST",
