@@ -65,8 +65,8 @@ app.use("/api/leads", leadsRoutes);
 // ─── Static paths ─────────────────────────────────────────
 const publicPath = path.join(__dirname, "..", "..", "public");
 
-// ─── Landing Page ──────────────────────────────────────────
-app.get("/", (_req, res) => {
+// ─── Landing Pages ────────────────────────────────────────
+app.get(["/", "/do"], (_req, res) => {
   res.sendFile(path.join(publicPath, "landing.html"));
 });
 

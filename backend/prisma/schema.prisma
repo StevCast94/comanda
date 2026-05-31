@@ -584,10 +584,12 @@ model Lead {
   email        String
   phone        String?
   message      String?
+  country      String?
   source       String   @default("landing")
   status       String   @default("new")
   createdAt    DateTime @default(now())
 
   @@index([status])
   @@index([createdAt])
+  @@index([country])
 }
