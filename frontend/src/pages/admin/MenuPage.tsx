@@ -10,11 +10,8 @@ import {
 type Tab = "products" | "categories" | "combos";
 
 const KITCHEN_OPTIONS = [
-  { value: "KITCHEN_1", label: "Cocina 1 (Acompañantes)" },
-  { value: "KITCHEN_2", label: "Cocina 2 (Proteína)" },
-  { value: "BAR", label: "Bar (Bebidas)" },
-  { value: "BOTH", label: "Ambas cocinas" },
-  { value: "NONE", label: "Ninguna" },
+  { value: "KITCHEN_1", label: "Cocina" },
+  { value: "NONE", label: "Ninguna (bebidas/postres)" },
 ];
 
 const TYPE_OPTIONS = [

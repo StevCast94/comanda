@@ -346,6 +346,11 @@ export default function WaiterPage() {
                         <span className="font-medium text-accent">{item.quantity}x</span>
                         <div>
                           <span className="text-text">{item.menuItem?.name || (item as any).combo?.name}</span>
+                          {(item as any).comboSelections && Object.keys((item as any).comboSelections).length > 0 && (
+                            <p className="text-xs text-text-muted">
+                              {Object.entries((item as any).comboSelections).map(([k, v]) => `${k}: ${v}`).join(" · ")}
+                            </p>
+                          )}
                           {item.notes && <p className="text-xs text-warning">📝 {item.notes}</p>}
                           {(item.modifiers as Array<{name: string}>).length > 0 && (
                             <p className="text-xs text-text-muted">

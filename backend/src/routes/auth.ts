@@ -93,7 +93,7 @@ router.get("/me", authenticate, async (req: Request, res: Response) => {
       },
     });
 
-    if (!user || !user) {
+    if (!user) {
       res.status(404).json({ error: "Usuario no encontrado" });
       return;
     }

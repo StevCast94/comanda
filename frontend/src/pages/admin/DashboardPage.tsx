@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { usePolling } from "../../hooks/usePolling";
 import * as api from "../../services/api";
-import type { DailySummary, Order, CashRegister } from "../../types";
+import type { DailySummary, Order, CashRegister, MenuItem } from "../../types";
 import MenuPage from "./MenuPage";
 import UsersPage from "./UsersPage";
 import ReportsPage from "./ReportsPage";
@@ -85,6 +85,12 @@ export default function AdminDashboard() {
   const [orderSearch, setOrderSearch] = useState("");
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [products, setProducts] = useState<MenuItem[]>([]);
+
+  // Load products once for EditOrderModal
+  useEffect(() => {
+    api.products.list({ active: true }).then(r => setProducts(r.products)).catch(() => {});
+  }, []);
 
   const filteredOrders = useMemo(() => {
     let orders = activeOrders;
@@ -437,7 +443,7 @@ export default function AdminDashboard() {
       {editingOrder && (
         <EditOrderModal
           order={editingOrder}
-          products={[]}
+          products={products}
           onClose={() => setEditingOrder(null)}
           onSaved={() => { setEditingOrder(null); refresh(); }}
         />
@@ -510,7 +516,7 @@ function ConfigPanel() {
     setSaving(true); setMsg("");
     try {
       await api.settings.updateInfo(info);
-      setMsg("? Configuración guardada");
+      setMsg("? Configuraciï¿½n guardada");
     } catch (e: any) {
       setMsg("? Error: " + (e.message || "desconocido"));
     }
@@ -533,12 +539,12 @@ function ConfigPanel() {
               value={info.name} onChange={e => setInfo({...info, name: e.target.value})} />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-text-muted">Dirección</label>
+            <label className="mb-1 block text-xs text-text-muted">Direcciï¿½n</label>
             <input className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-accent"
               value={info.address} onChange={e => setInfo({...info, address: e.target.value})} />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-text-muted">Teléfono</label>
+            <label className="mb-1 block text-xs text-text-muted">Telï¿½fono</label>
             <input className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-accent"
               value={info.phone} onChange={e => setInfo({...info, phone: e.target.value})} />
           </div>
@@ -572,7 +578,7 @@ function ConfigPanel() {
         <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-text">
           <DollarSign className="h-4 w-4 text-warning" /> Impuestos y Servicio
         </h3>
-        <p className="text-xs text-text-muted">Configurable próximamente — actualmente IVA 15%, Servicio 10%.</p>
+        <p className="text-xs text-text-muted">Configurable prï¿½ximamente ï¿½ actualmente IVA 15%, Servicio 10%.</p>
       </div>
     </div>
   );
