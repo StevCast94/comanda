@@ -67,7 +67,7 @@ const publicPath = path.join(__dirname, "..", "..", "public");
 
 // ─── Landing Pages ────────────────────────────────────────
 app.get(["/", "/do"], (_req, res) => {
-  res.sendFile(path.join(publicPath, "landing.html"));
+  res.sendFile(path.join(publicPath, "index.html"));
 });
 
 // ─── App — React SPA under /app ───────────────────────────
