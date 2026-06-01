@@ -143,7 +143,7 @@ export default function KDSPage() {
                       <div className="flex-1">
                         <p className="text-2xl font-extrabold text-text leading-tight">
                           {item.quantity > 1 && <span className="mr-2 text-accent">{item.quantity}x</span>}
-                          {item.menuItem?.name || item.combo?.name || hasSelections ? "Combo" : "Ítem"}
+                          {item.menuItem?.name || item.combo?.name || (hasSelections ? "Combo" : "Ítem")}
                         </p>
                         {/* Combo selections — BIG */}
                         {hasSelections && (
