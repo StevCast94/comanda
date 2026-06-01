@@ -2,7 +2,12 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { UserRole } from "@prisma/client";
 
-const JWT_SECRET = process.env.JWT_SECRET || "comanda-dev-secret-change-in-prod";
+if (!process.env.JWT_SECRET) {
+  throw new Error(
+    "JWT_SECRET no está configurado. Define una variable de entorno aleatoria (≥32 bytes) antes de arrancar."
+  );
+}
+const JWT_SECRET: string = process.env.JWT_SECRET;
 
 export interface JwtPayload {
   userId: string;

@@ -192,9 +192,17 @@ router.post("/:id/modifiers", authorize("ADMIN"), async (req: Request, res: Resp
 router.put("/modifiers/:id", authorize("ADMIN"), async (req: Request, res: Response) => {
   try {
     const data = modifierSchema.partial().parse(req.body);
+    const existing = await prisma.modifier.findUnique({
+      where: { id: req.params.id as string },
+      include: { menuItem: { select: { restaurantId: true } } },
+    });
+    if (!existing || (req.restaurantId && existing.menuItem.restaurantId !== req.restaurantId)) {
+      res.status(404).json({ error: "Modificador no encontrado" }); return;
+    }
     const modifier = await prisma.modifier.update({ where: { id: req.params.id as string }, data });
     res.json({ modifier });
   } catch (err) {
+    if (err instanceof z.ZodError) { res.status(400).json({ error: "Datos inválidos", details: err.errors }); return; }
     console.error(err);
     res.status(500).json({ error: "Error" });
   }
@@ -203,6 +211,13 @@ router.put("/modifiers/:id", authorize("ADMIN"), async (req: Request, res: Respo
 // DELETE /api/modifiers/:id
 router.delete("/modifiers/:id", authorize("ADMIN"), async (req: Request, res: Response) => {
   try {
+    const existing = await prisma.modifier.findUnique({
+      where: { id: req.params.id as string },
+      include: { menuItem: { select: { restaurantId: true } } },
+    });
+    if (!existing || (req.restaurantId && existing.menuItem.restaurantId !== req.restaurantId)) {
+      res.status(404).json({ error: "Modificador no encontrado" }); return;
+    }
     await prisma.modifier.delete({ where: { id: req.params.id as string } });
     res.json({ message: "Modificador eliminado" });
   } catch (err) {
