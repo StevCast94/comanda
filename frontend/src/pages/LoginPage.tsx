@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { navigate } from "../App";
 import { UtensilsCrossed, Eye, EyeOff, Loader2 } from "lucide-react";
+import InstallButton from "../components/InstallButton";
 
 export default function LoginPage() {
   const { login, loading, error, clearError, redirectPath } = useAuth();
@@ -24,7 +25,10 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-surface px-4">
       <div className="w-full max-w-sm">
         {/* Logo */}
-        <div className="mb-8 text-center">
+        <div className="mb-8 text-center relative">
+          <div className="absolute right-0 top-0">
+            <InstallButton />
+          </div>
           <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/10">
             <UtensilsCrossed className="h-8 w-8 text-accent" />
           </div>

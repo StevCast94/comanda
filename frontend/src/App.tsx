@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, type ReactNode } from "react";
 import { AuthContext, useAuthProvider, useAuth } from "./hooks/useAuth";
+import { ThemeProvider, useTheme } from "./hooks/useTheme";
 import type { UserRole } from "./types";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
@@ -8,7 +9,7 @@ import KDSPage from "./pages/kitchen/KDSPage";
 import WaiterPage from "./pages/waiter/WaiterPage";
 import AdminDashboard from "./pages/admin/DashboardPage";
 import SuperAdminPage from "./pages/superadmin/SuperDashboardPage";
-import { Lock } from "lucide-react";
+import { Lock, Sun, Moon } from "lucide-react";
 import ChangePasswordModal from "./components/ChangePasswordModal";
 
 // ─── Simple Hash Router ─────────────────────────────────────
@@ -149,13 +150,33 @@ function GlobalPasswordButton() {
 
 // ─── App ────────────────────────────────────────────────────
 
+function ThemeToggleButton() {
+  const { theme, toggle } = useTheme();
+  return (
+    <button
+      onClick={toggle}
+      className="fixed bottom-6 right-6 z-40 flex h-10 w-10 items-center justify-center rounded-full bg-surface-2 border border-border shadow-lg hover:bg-surface-3 transition"
+      title={theme === "light" ? "Modo oscuro" : "Modo claro"}
+    >
+      {theme === "light" ? (
+        <Moon className="h-4 w-4 text-text-muted" />
+      ) : (
+        <Sun className="h-4 w-4 text-text-muted" />
+      )}
+    </button>
+  );
+}
+
 export default function App() {
   const auth = useAuthProvider();
 
   return (
-    <AuthContext.Provider value={auth}>
-      <AppRouter />
-      <GlobalPasswordButton />
-    </AuthContext.Provider>
+    <ThemeProvider>
+      <AuthContext.Provider value={auth}>
+        <AppRouter />
+        <GlobalPasswordButton />
+        <ThemeToggleButton />
+      </AuthContext.Provider>
+    </ThemeProvider>
   );
 }
