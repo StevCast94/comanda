@@ -1,0 +1,41 @@
+name: Backup diario de la base de datos
+
+# Respaldo automático: pg_dump -> Cloudinary (script backend/scripts/backup.ts)
+# Corre todos los días a las 07:00 UTC (= 02:00 America/Guayaquil).
+on:
+  schedule:
+    - cron: "0 7 * * *"
+  workflow_dispatch: {} # permite ejecutarlo manualmente desde la pestaña Actions
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # pg_dump debe ser >= la versión del servidor Postgres de Railway.
+      # Instalamos el cliente 16 desde el repo oficial PGDG.
+      - name: Instalar postgresql-client 16
+        run: |
+          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-16
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar dependencias del backend
+        working-directory: backend
+        run: npm ci
+
+      - name: Ejecutar backup
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CLOUDINARY_URL: ${{ secrets.CLOUDINARY_URL }}
+          BACKUP_RETENTION: "14"
+        run: npm run backup
