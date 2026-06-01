@@ -95,16 +95,37 @@ export default function LoginPage() {
           </form>
         </div>
 
-        {/* Register link */}
-        <p className="mt-4 text-center text-sm text-text-muted">
-          ¿No tienes cuenta?{" "}
-          <button
-            onClick={() => navigate("/registro")}
-            className="text-accent hover:underline"
-          >
-            Registra tu restaurante
-          </button>
-        </p>
+        {/* Demo & Contact */}
+        <div className="mt-4 space-y-3 text-center">
+          <p className="text-sm text-text-muted">
+            ¿No tienes cuenta?{" "}
+            <a
+              href="https://comanda.one"
+              className="text-accent hover:underline font-medium"
+            >
+              Solicita una demo gratuita
+            </a>
+          </p>
+          <div className="flex items-center justify-center gap-3 text-xs text-text-muted">
+            <a
+              href="mailto:info@comanda.ec"
+              className="flex items-center gap-1 hover:text-accent transition"
+            >
+              <span>📧</span>
+              <span>info@comanda.ec</span>
+            </a>
+            <span className="text-border">|</span>
+            <a
+              href="https://wa.me/593999999999"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 hover:text-accent transition"
+            >
+              <span>📱</span>
+              <span>WhatsApp</span>
+            </a>
+          </div>
+        </div>
 
         {/* Dev credentials */}
         {import.meta.env.DEV && (
