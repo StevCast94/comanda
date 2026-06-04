@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
 import { prisma } from "../index";
+import { isCommonPassword } from "../lib/commonPasswords";
 
 const router = Router();
 
@@ -23,7 +24,10 @@ const registerSchema = z.object({
   phone: z.string().optional(),
   adminName: z.string().min(2, "Nombre del administrador requerido"),
   adminEmail: z.string().email("Email inválido"),
-  adminPassword: z.string().min(6, "Mínimo 6 caracteres"),
+  adminPassword: z
+    .string()
+    .min(8, "Mínimo 8 caracteres")
+    .refine((p) => !isCommonPassword(p), "Contraseña demasiado común, elige otra"),
 });
 
 // POST /api/register — Public registration of a new restaurant
@@ -54,7 +58,7 @@ router.post("/", registerLimiter, async (req: Request, res: Response) => {
       return;
     }
 
-    const hashedPassword = await bcrypt.hash(data.adminPassword, 10);
+    const hashedPassword = await bcrypt.hash(data.adminPassword, 12);
     const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14 days
 
     // Transaction: Restaurant + Admin User + Trial Subscription

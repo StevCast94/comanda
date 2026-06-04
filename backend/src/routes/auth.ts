@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import { z } from "zod";
 import { prisma } from "../index";
 import { authenticate, signToken } from "../middleware/auth";
+import { isCommonPassword } from "../lib/commonPasswords";
 
 const router = Router();
 
@@ -13,7 +14,10 @@ const loginSchema = z.object({
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1),
-  newPassword: z.string().min(6, "Mínimo 6 caracteres"),
+  newPassword: z
+    .string()
+    .min(8, "Mínimo 8 caracteres")
+    .refine((p) => !isCommonPassword(p), "Contraseña demasiado común, elige otra"),
 });
 
 /**
@@ -166,7 +170,7 @@ router.put("/change-password", authenticate, async (req: Request, res: Response)
       return;
     }
 
-    const hashed = await bcrypt.hash(newPassword, 10);
+    const hashed = await bcrypt.hash(newPassword, 12);
     await prisma.user.update({
       where: { id: user.id },
       // S5 — incrementar tokenVersion invalida todos los JWT emitidos antes
