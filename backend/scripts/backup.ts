@@ -67,7 +67,9 @@ async function dumpDatabase(): Promise<Buffer> {
 function uploadToCloudinary(buffer: Buffer, publicId: string): Promise<{ bytes: number; secure_url: string }> {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
-      { resource_type: "raw", folder: FOLDER, public_id: publicId, overwrite: false },
+      // type: "private" → el recurso NO es accesible por URL pública.
+      // Descargarlo requiere una URL firmada generada con el API secret.
+      { resource_type: "raw", type: "private", folder: FOLDER, public_id: publicId, overwrite: false },
       (err, result) => {
         if (err || !result) return reject(err || new Error("Upload sin resultado"));
         resolve({ bytes: result.bytes, secure_url: result.secure_url });
@@ -81,7 +83,7 @@ function uploadToCloudinary(buffer: Buffer, publicId: string): Promise<{ bytes: 
 async function applyRetention(): Promise<number> {
   const res = await cloudinary.api.resources({
     resource_type: "raw",
-    type: "upload",
+    type: "private",
     prefix: `${FOLDER}/`,
     max_results: 500,
   });
@@ -92,7 +94,7 @@ async function applyRetention(): Promise<number> {
   resources.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   const toDelete = resources.slice(RETENTION).map((r) => r.public_id);
   if (toDelete.length > 0) {
-    await cloudinary.api.delete_resources(toDelete, { resource_type: "raw", type: "upload" });
+    await cloudinary.api.delete_resources(toDelete, { resource_type: "raw", type: "private" });
   }
   return toDelete.length;
 }
