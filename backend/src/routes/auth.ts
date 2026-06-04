@@ -16,6 +16,45 @@ const changePasswordSchema = z.object({
   newPassword: z.string().min(6, "Mínimo 6 caracteres"),
 });
 
+/**
+ * S7 — Registra cada intento de login (éxito o fallo) en AuthLog.
+ * Si hay ≥10 fallos para el mismo username en los últimos 15 min, alerta
+ * por consola (futura notificación al SUPERADMIN). No bloquea el flujo:
+ * cualquier error de logging se traga para no romper el login.
+ */
+async function recordAuthAttempt(
+  req: Request,
+  username: string | undefined,
+  success: boolean,
+  userId?: string
+): Promise<void> {
+  try {
+    await prisma.authLog.create({
+      data: {
+        userId: userId ?? null,
+        username: username ?? null,
+        ip: req.ip ?? null,
+        userAgent: req.headers["user-agent"]?.slice(0, 255) ?? null,
+        success,
+      },
+    });
+
+    if (!success && username) {
+      const since = new Date(Date.now() - 15 * 60 * 1000);
+      const fails = await prisma.authLog.count({
+        where: { username, success: false, createdAt: { gte: since } },
+      });
+      if (fails >= 10) {
+        console.error(
+          `[AUTH ALERT] ${fails} intentos fallidos para "${username}" en 15min (IP ${req.ip})`
+        );
+      }
+    }
+  } catch (err) {
+    console.error("AuthLog error:", err);
+  }
+}
+
 // POST /api/auth/login
 router.post("/login", async (req: Request, res: Response) => {
   try {
@@ -23,15 +62,19 @@ router.post("/login", async (req: Request, res: Response) => {
 
     const user = await prisma.user.findUnique({ where: { username } });
     if (!user || !user.active) {
+      await recordAuthAttempt(req, username, false, user?.id);
       res.status(401).json({ error: "Usuario o contraseña incorrectos" });
       return;
     }
 
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
+      await recordAuthAttempt(req, username, false, user.id);
       res.status(401).json({ error: "Usuario o contraseña incorrectos" });
       return;
     }
+
+    await recordAuthAttempt(req, username, true, user.id);
 
     // Update last login
     await prisma.user.update({

@@ -594,3 +594,16 @@ model Lead {
   @@index([createdAt])
   @@index([country])
 }
+
+model AuthLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  username  String?
+  ip        String?
+  userAgent String?
+  success   Boolean
+  createdAt DateTime @default(now())
+
+  @@index([username, createdAt])
+  @@index([createdAt])
+}
