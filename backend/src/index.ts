@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import path from "path";
 import rateLimit from "express-rate-limit";
 import { PrismaClient } from "@prisma/client";
@@ -30,7 +31,38 @@ const PORT = parseInt(process.env.PORT || "3000", 10);
 
 // ─── Global Middleware ──────────────────────────────────────
 app.set("trust proxy", 1); // Railway uses reverse proxy
-app.use(cors({ origin: true, credentials: true }));
+
+// ─── S2 — Helmet (security headers + HSTS) ──────────────────
+// CSP se define por separado más abajo (S6) para controlar las directivas.
+app.use(helmet({
+  contentSecurityPolicy: false,
+  hsts: { maxAge: 15552000, includeSubDomains: true },
+}));
+
+// ─── S6 — Content Security Policy ───────────────────────────
+// 'unsafe-inline' en styleSrc es necesario para Tailwind.
+app.use(helmet.contentSecurityPolicy({
+  directives: {
+    defaultSrc: ["'self'"],
+    scriptSrc: ["'self'"],
+    styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+    fontSrc: ["'self'", "https://fonts.gstatic.com"],
+    imgSrc: ["'self'", "data:", "https://res.cloudinary.com"],
+    connectSrc: ["'self'"],
+    frameAncestors: ["'none'"],
+  },
+}));
+
+// ─── S4 — CORS whitelist ────────────────────────────────────
+const allowedOrigins = (process.env.CORS_ORIGINS ?? "https://comanda.one").split(",");
+app.use(cors({
+  origin: (o, cb) => {
+    if (!o || allowedOrigins.includes(o)) return cb(null, true);
+    cb(new Error("CORS not allowed"));
+  },
+  credentials: true,
+}));
+
 app.use(express.json({ limit: "10mb" }));
 
 // Rate limiting: 300 requests/min per IP
@@ -41,6 +73,19 @@ app.use(rateLimit({
   legacyHeaders: false,
   message: { error: "Demasiadas solicitudes. Intenta de nuevo en un minuto." },
 }));
+
+// ─── S3 — Rate-limit dedicado para login (fuerza bruta) ─────
+// 10 intentos / 15 min por IP+username. Va después de express.json
+// (para leer req.body.username) y antes de montar las rutas de auth.
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  keyGenerator: (req) => `${req.ip}:${req.body?.username ?? ""}`,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Demasiados intentos. Espera 15 minutos." },
+});
+app.use("/api/auth/login", loginLimiter);
 
 // ─── API Routes ─────────────────────────────────────────────
 app.use("/api/auth", authRoutes);
