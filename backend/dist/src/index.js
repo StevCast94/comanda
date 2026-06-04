@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.prisma = void 0;
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
+const helmet_1 = __importDefault(require("helmet"));
 const path_1 = __importDefault(require("path"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const client_1 = require("@prisma/client");
@@ -33,7 +34,35 @@ const app = (0, express_1.default)();
 const PORT = parseInt(process.env.PORT || "3000", 10);
 // ─── Global Middleware ──────────────────────────────────────
 app.set("trust proxy", 1); // Railway uses reverse proxy
-app.use((0, cors_1.default)({ origin: true, credentials: true }));
+// ─── S2 — Helmet (security headers + HSTS) ──────────────────
+// CSP se define por separado más abajo (S6) para controlar las directivas.
+app.use((0, helmet_1.default)({
+    contentSecurityPolicy: false,
+    hsts: { maxAge: 15552000, includeSubDomains: true },
+}));
+// ─── S6 — Content Security Policy ───────────────────────────
+// 'unsafe-inline' en styleSrc es necesario para Tailwind.
+app.use(helmet_1.default.contentSecurityPolicy({
+    directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "https://res.cloudinary.com"],
+        connectSrc: ["'self'"],
+        frameAncestors: ["'none'"],
+    },
+}));
+// ─── S4 — CORS whitelist ────────────────────────────────────
+const allowedOrigins = (process.env.CORS_ORIGINS ?? "https://comanda.one").split(",");
+app.use((0, cors_1.default)({
+    origin: (o, cb) => {
+        if (!o || allowedOrigins.includes(o))
+            return cb(null, true);
+        cb(new Error("CORS not allowed"));
+    },
+    credentials: true,
+}));
 app.use(express_1.default.json({ limit: "10mb" }));
 // Rate limiting: 300 requests/min per IP
 app.use((0, express_rate_limit_1.default)({
@@ -43,6 +72,18 @@ app.use((0, express_rate_limit_1.default)({
     legacyHeaders: false,
     message: { error: "Demasiadas solicitudes. Intenta de nuevo en un minuto." },
 }));
+// ─── S3 — Rate-limit dedicado para login (fuerza bruta) ─────
+// 10 intentos / 15 min por IP+username. Va después de express.json
+// (para leer req.body.username) y antes de montar las rutas de auth.
+const loginLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    keyGenerator: (req) => `${req.ip}:${req.body?.username ?? ""}`,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Demasiados intentos. Espera 15 minutos." },
+});
+app.use("/api/auth/login", loginLimiter);
 // ─── API Routes ─────────────────────────────────────────────
 app.use("/api/auth", auth_1.default);
 app.use("/api/register", register_1.default);

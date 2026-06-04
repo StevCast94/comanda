@@ -8,24 +8,46 @@ exports.authenticate = authenticate;
 exports.authorize = authorize;
 exports.signToken = signToken;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const JWT_SECRET = process.env.JWT_SECRET || "comanda-dev-secret-change-in-prod";
+const index_1 = require("../index");
+if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET no está configurado. Define una variable de entorno aleatoria (≥32 bytes) antes de arrancar.");
+}
+const JWT_SECRET = process.env.JWT_SECRET;
 exports.JWT_SECRET = JWT_SECRET;
 /** Extract and verify JWT from Authorization header */
-function authenticate(req, res, next) {
+async function authenticate(req, res, next) {
     const header = req.headers.authorization;
     if (!header?.startsWith("Bearer ")) {
         res.status(401).json({ error: "Token requerido" });
         return;
     }
     const token = header.slice(7);
+    let payload;
     try {
-        const payload = jsonwebtoken_1.default.verify(token, JWT_SECRET);
-        req.user = payload;
-        next();
+        payload = jsonwebtoken_1.default.verify(token, JWT_SECRET);
     }
     catch {
         res.status(401).json({ error: "Token inválido o expirado" });
+        return;
     }
+    // S5 — revocación: el tokenVersion del JWT debe coincidir con el de la BD.
+    // Al cambiar contraseña se incrementa tokenVersion → los JWT viejos quedan inválidos.
+    try {
+        const user = await index_1.prisma.user.findUnique({
+            where: { id: payload.userId },
+            select: { tokenVersion: true, active: true },
+        });
+        if (!user || !user.active || user.tokenVersion !== (payload.tokenVersion ?? 0)) {
+            res.status(401).json({ error: "Sesión expirada. Inicia sesión de nuevo." });
+            return;
+        }
+    }
+    catch {
+        res.status(500).json({ error: "Error de autenticación" });
+        return;
+    }
+    req.user = payload;
+    next();
 }
 /** Factory: restrict route to specific roles */
 function authorize(...allowedRoles) {
