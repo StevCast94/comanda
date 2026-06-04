@@ -47,6 +47,7 @@ router.post("/login", async (req: Request, res: Response) => {
       email: user.email,
       role: user.role,
       restaurantId: user.restaurantId,
+      tokenVersion: user.tokenVersion,
     }, expiresIn);
 
     // Include restaurant data so frontend has settings immediately
@@ -125,10 +126,12 @@ router.put("/change-password", authenticate, async (req: Request, res: Response)
     const hashed = await bcrypt.hash(newPassword, 10);
     await prisma.user.update({
       where: { id: user.id },
-      data: { password: hashed },
+      // S5 — incrementar tokenVersion invalida todos los JWT emitidos antes
+      // (incluido el actual): el usuario deberá iniciar sesión de nuevo.
+      data: { password: hashed, tokenVersion: { increment: 1 } },
     });
 
-    res.json({ message: "Contraseña actualizada" });
+    res.json({ message: "Contraseña actualizada. Inicia sesión de nuevo." });
   } catch (err) {
     if (err instanceof z.ZodError) {
       res.status(400).json({ error: "Datos inválidos", details: err.errors });

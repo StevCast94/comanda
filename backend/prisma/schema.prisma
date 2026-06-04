@@ -192,6 +192,7 @@ model User {
   avatar       String?
   active       Boolean   @default(true)
   lastLogin    DateTime?
+  tokenVersion Int       @default(0)
   restaurantId String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
