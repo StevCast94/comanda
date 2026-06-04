@@ -1,9 +1,19 @@
 import { Router, Request, Response } from "express";
 import bcrypt from "bcrypt";
+import rateLimit from "express-rate-limit";
 import { z } from "zod";
 import { prisma } from "../index";
 
 const router = Router();
+
+// S8 — rate-limit dedicado: 5 registros / 15 min por IP.
+const registerLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Demasiados registros. Intenta de nuevo en 15 minutos." },
+});
 
 const registerSchema = z.object({
   restaurantName: z.string().min(2, "Nombre del restaurante requerido"),
@@ -17,8 +27,17 @@ const registerSchema = z.object({
 });
 
 // POST /api/register — Public registration of a new restaurant
-router.post("/", async (req: Request, res: Response) => {
+router.post("/", registerLimiter, async (req: Request, res: Response) => {
   try {
+    // S8 — honeypot: bots rellenan campos ocultos. Si viene con valor,
+    // respondemos 200 sin procesar (no le damos pistas al bot).
+    // TODO: para anti-bot más fuerte, integrar Cloudflare Turnstile aquí
+    // (validar req.body.turnstileToken contra el endpoint de siteverify).
+    if (typeof req.body?.honeypot === "string" && req.body.honeypot.trim() !== "") {
+      res.status(200).json({ message: "¡Restaurante registrado!" });
+      return;
+    }
+
     const data = registerSchema.parse(req.body);
 
     // Check unique slug
