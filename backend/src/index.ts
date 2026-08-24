@@ -23,6 +23,7 @@ import settingsRoutes from "./routes/settings";
 import superadminRoutes from "./routes/superadmin";
 import plansRoutes from "./routes/plans";
 import leadsRoutes from "./routes/leads";
+import metricsRoutes from "./routes/metrics";
 
 export const prisma = new PrismaClient();
 
@@ -96,6 +97,15 @@ app.get("/api/health", async (_req, res) => {
     res.status(503).json({ status: "error", db: "unreachable" });
   }
 });
+
+// ─── Metrics (público, sin auth, uso interno de Matrix) ─────
+const metricsLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use("/api/metrics", metricsLimiter, metricsRoutes);
 
 // ─── API Routes ─────────────────────────────────────────────
 app.use("/api/auth", authRoutes);

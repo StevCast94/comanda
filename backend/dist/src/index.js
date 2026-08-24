@@ -62,6 +62,7 @@ const settings_1 = __importDefault(require("./routes/settings"));
 const superadmin_1 = __importDefault(require("./routes/superadmin"));
 const plans_1 = __importDefault(require("./routes/plans"));
 const leads_1 = __importDefault(require("./routes/leads"));
+const metrics_1 = __importDefault(require("./routes/metrics"));
 exports.prisma = new client_1.PrismaClient();
 const app = (0, express_1.default)();
 const PORT = parseInt(process.env.PORT || "3000", 10);
@@ -127,6 +128,14 @@ app.get("/api/health", async (_req, res) => {
         res.status(503).json({ status: "error", db: "unreachable" });
     }
 });
+// ─── Metrics (público, sin auth, uso interno de Matrix) ─────
+const metricsLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.use("/api/metrics", metricsLimiter, metrics_1.default);
 // ─── API Routes ─────────────────────────────────────────────
 app.use("/api/auth", auth_1.default);
 app.use("/api/register", register_1.default);
