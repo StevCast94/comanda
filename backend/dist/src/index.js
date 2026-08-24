@@ -63,6 +63,7 @@ const superadmin_1 = __importDefault(require("./routes/superadmin"));
 const plans_1 = __importDefault(require("./routes/plans"));
 const leads_1 = __importDefault(require("./routes/leads"));
 const metrics_1 = __importDefault(require("./routes/metrics"));
+const tickets_1 = __importDefault(require("./routes/tickets"));
 exports.prisma = new client_1.PrismaClient();
 const app = (0, express_1.default)();
 const PORT = parseInt(process.env.PORT || "3000", 10);
@@ -154,6 +155,7 @@ app.use("/api/reports", reports_1.default);
 app.use("/api/delivery", delivery_1.default);
 app.use("/api/restaurant", settings_1.default);
 app.use("/api/superadmin", superadmin_1.default);
+app.use("/api/tickets", tickets_1.default);
 app.use("/api/leads", leads_1.default);
 // ─── Static paths ─────────────────────────────────────────
 const publicPath = path_1.default.join(__dirname, "..", "..", "public");

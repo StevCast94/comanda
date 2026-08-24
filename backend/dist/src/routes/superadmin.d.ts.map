@@ -1,1 +1,1 @@
-{"version":3,"file":"superadmin.d.ts","sourceRoot":"","sources":["../../../src/routes/superadmin.ts"],"names":[],"mappings":"AAMA,QAAA,MAAM,QAAQ,4CAAa,CAAC;AAiO5B,OAAO,EAAE,QAAQ,IAAI,OAAO,EAAE,CAAC"}
+{"version":3,"file":"superadmin.d.ts","sourceRoot":"","sources":["../../../src/routes/superadmin.ts"],"names":[],"mappings":"AAOA,QAAA,MAAM,QAAQ,4CAAa,CAAC;AAqQ5B,OAAO,EAAE,QAAQ,IAAI,OAAO,EAAE,CAAC"}

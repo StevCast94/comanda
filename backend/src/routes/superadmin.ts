@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import { z } from "zod";
 import { prisma as saPrisma } from "../index";
 import { authenticate as saAuth, authorize as saAuthz } from "../middleware/auth";
+import { logAudit } from "../lib/audit";
 
 const saRouter = SARouter();
 saRouter.use(saAuth, saAuthz("SUPERADMIN"));
@@ -137,6 +138,12 @@ saRouter.post("/restaurants", async (req: SAReq, res: SARes) => {
       return { restaurant, admin };
     });
 
+    await logAudit({
+      userId: req.user?.userId, userName: req.user?.email,
+      action: "restaurant.create", targetType: "Restaurant", targetId: result.restaurant.id,
+      details: { name: result.restaurant.name, slug: result.restaurant.slug, plan: data.plan || "TRIAL" },
+    });
+
     res.status(201).json({
       message: "Restaurante creado exitosamente",
       restaurant: { id: result.restaurant.id, name: result.restaurant.name, slug: result.restaurant.slug },
@@ -174,6 +181,11 @@ saRouter.patch("/restaurants/:id/suspend", async (req: SAReq, res: SARes) => {
       where: { id: req.params.id as string },
       data: { active: false },
     });
+    await logAudit({
+      userId: req.user?.userId, userName: req.user?.email,
+      action: "restaurant.suspend", targetType: "Restaurant", targetId: restaurant.id,
+      details: { name: restaurant.name },
+    });
     res.json({ restaurant });
   } catch (err) {
     console.error(err);
@@ -187,6 +199,11 @@ saRouter.patch("/restaurants/:id/reactivate", async (req: SAReq, res: SARes) => 
     const restaurant = await saPrisma.restaurant.update({
       where: { id: req.params.id as string },
       data: { active: true },
+    });
+    await logAudit({
+      userId: req.user?.userId, userName: req.user?.email,
+      action: "restaurant.reactivate", targetType: "Restaurant", targetId: restaurant.id,
+      details: { name: restaurant.name },
     });
     res.json({ restaurant });
   } catch (err) {
@@ -222,10 +239,30 @@ saRouter.put("/subscriptions/:id", async (req: SAReq, res: SARes) => {
         maxCombos: limits.maxCombos,
       },
     });
+    await logAudit({
+      userId: req.user?.userId, userName: req.user?.email,
+      action: "subscription.plan_change", targetType: "Subscription", targetId: sub.id,
+      details: { restaurantId: sub.restaurantId, newPlan: plan },
+    });
     res.json({ subscription: sub });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Error actualizando suscripción" });
+  }
+});
+
+// GET /api/superadmin/audit-log — log de acciones críticas
+saRouter.get("/audit-log", async (req: SAReq, res: SARes) => {
+  try {
+    const limit = Math.min(parseInt((req.query.limit as string) || "50", 10), 200);
+    const logs = await saPrisma.auditLog.findMany({
+      orderBy: { createdAt: "desc" },
+      take: limit,
+    });
+    res.json({ logs });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error cargando auditoría" });
   }
 });
 
@@ -264,8 +301,17 @@ saRouter.patch("/restaurants/:id", async (req: SAReq, res: SARes) => {
 // DELETE /api/superadmin/restaurants/:id � Hard delete
 saRouter.delete("/restaurants/:id", async (req: SAReq, res: SARes) => {
   try {
+    const restaurant = await saPrisma.restaurant.findUnique({
+      where: { id: req.params.id as string },
+      select: { id: true, name: true, slug: true },
+    });
     await saPrisma.restaurant.delete({
       where: { id: req.params.id as string },
+    });
+    await logAudit({
+      userId: req.user?.userId, userName: req.user?.email,
+      action: "restaurant.delete", targetType: "Restaurant", targetId: req.params.id as string,
+      details: restaurant ? { name: restaurant.name, slug: restaurant.slug } : undefined,
     });
     res.json({ message: "Restaurante eliminado" });
   } catch (err) {

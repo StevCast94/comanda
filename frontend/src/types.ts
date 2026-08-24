@@ -190,6 +190,47 @@ export interface DeliveryOrder {
   deliveryZone: { id: string; name: string; fee: number } | null;
 }
 
+// ─── Tickets de soporte ──────────────────────────────────────
+
+export type TicketStatus = "OPEN" | "IN_PROGRESS" | "CLOSED";
+
+export interface TicketMessage {
+  id: string;
+  ticketId: string;
+  userId: string;
+  body: string;
+  createdAt: string;
+  user: { id: string; name: string; role: UserRole };
+}
+
+export interface Ticket {
+  id: string;
+  restaurantId: string;
+  userId: string;
+  subject: string;
+  status: TicketStatus;
+  createdAt: string;
+  updatedAt: string;
+  closedAt: string | null;
+  restaurant: { id: string; name: string; slug: string };
+  user: { id: string; name: string };
+  messages?: TicketMessage[];
+  _count?: { messages: number };
+}
+
+// ─── Audit log ────────────────────────────────────────────────
+
+export interface AuditLogEntry {
+  id: string;
+  userId: string | null;
+  userName: string | null;
+  action: string;
+  targetType: string | null;
+  targetId: string | null;
+  details: Record<string, unknown> | null;
+  createdAt: string;
+}
+
 // ─── POS Local State (not from API) ────────────────────────
 
 export interface CartItem {

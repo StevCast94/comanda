@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import * as api from "../../services/api";
+import TicketsPanel from "../../components/TicketsPanel";
+import AuditLogPanel from "../../components/AuditLogPanel";
 import {
   LogOut, Shield, Building2, Users, TrendingUp,
   RefreshCw, Loader2, CheckCircle, XCircle, Clock,
   CreditCard, AlertTriangle, Plus, Pause, Play, Edit3,
   Store, ChefHat, Coffee, Beer, Flame, Fish, Pizza,
   UtensilsCrossed, GlassWater, HelpCircle, Trash2,
-  Phone, MapPin, Key, User, X, Save, Mail,
+  Phone, MapPin, Key, User, X, Save, Mail, LifeBuoy, ScrollText,
 } from "lucide-react";
 
 interface Restaurant {
@@ -76,7 +78,7 @@ export default function SuperAdminPage() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"overview" | "restaurants" | "new">("overview");
+  const [tab, setTab] = useState<"overview" | "restaurants" | "new" | "tickets" | "audit">("overview");
   const [actionMsg, setActionMsg] = useState("");
 
   // ─── Modal state ──────────────────────────────────────────
@@ -220,6 +222,8 @@ export default function SuperAdminPage() {
           { id: "overview" as const, label: "Vista General", icon: TrendingUp },
           { id: "restaurants" as const, label: "Restaurantes", icon: Building2 },
           { id: "new" as const, label: "Nuevo", icon: Plus },
+          { id: "tickets" as const, label: "Tickets", icon: LifeBuoy },
+          { id: "audit" as const, label: "Auditoría", icon: ScrollText },
         ]).map((t) => (
           <button
             key={t.id}
@@ -398,6 +402,12 @@ export default function SuperAdminPage() {
                 </form>
               </div>
             )}
+
+            {/* ═══════ TICKETS ═══════ */}
+            {tab === "tickets" && <TicketsPanel scope="superadmin" />}
+
+            {/* ═══════ AUDIT LOG ═══════ */}
+            {tab === "audit" && <AuditLogPanel />}
           </>
         )}
       </main>

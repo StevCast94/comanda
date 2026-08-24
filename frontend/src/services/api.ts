@@ -240,6 +240,30 @@ export const delivery = {
     request<{ delivery: import("../types").DeliveryOrder }>(`/delivery/${id}/advance`, { method: "PATCH" }),
 };
 
+// ─── Tickets de soporte ─────────────────────────────────────
+
+export const tickets = {
+  list: (status?: string) =>
+    request<{ tickets: import("../types").Ticket[] }>(`/tickets${status ? `?status=${status}` : ""}`),
+  get: (id: string) => request<{ ticket: import("../types").Ticket }>(`/tickets/${id}`),
+  create: (data: { subject: string; body: string }) =>
+    request<{ ticket: import("../types").Ticket }>("/tickets", { method: "POST", body: JSON.stringify(data) }),
+  reply: (id: string, body: string) =>
+    request<{ ticket: import("../types").Ticket }>(`/tickets/${id}/messages`, {
+      method: "POST",
+      body: JSON.stringify({ body }),
+    }),
+  close: (id: string) =>
+    request<{ ticket: import("../types").Ticket }>(`/tickets/${id}/close`, { method: "PATCH" }),
+};
+
+// ─── Audit log ──────────────────────────────────────────────
+
+export const auditLog = {
+  list: (limit?: number) =>
+    request<{ logs: import("../types").AuditLogEntry[] }>(`/superadmin/audit-log${limit ? `?limit=${limit}` : ""}`),
+};
+
 // ─── Cash Register ──────────────────────────────────────────
 
 export const cashRegister = {

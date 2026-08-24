@@ -24,6 +24,7 @@ import superadminRoutes from "./routes/superadmin";
 import plansRoutes from "./routes/plans";
 import leadsRoutes from "./routes/leads";
 import metricsRoutes from "./routes/metrics";
+import ticketRoutes from "./routes/tickets";
 
 export const prisma = new PrismaClient();
 
@@ -125,6 +126,7 @@ app.use("/api/reports", reportRoutes);
 app.use("/api/delivery", deliveryRoutes);
 app.use("/api/restaurant", settingsRoutes);
 app.use("/api/superadmin", superadminRoutes);
+app.use("/api/tickets", ticketRoutes);
 app.use("/api/leads", leadsRoutes);
 
 // ─── Static paths ─────────────────────────────────────────

@@ -176,6 +176,7 @@ model Restaurant {
   subscription  Subscription?
   deliveryZones DeliveryZone[]
   tables        Table[]
+  tickets       Ticket[]
 
   @@index([slug])
   @@index([active])
@@ -203,6 +204,8 @@ model User {
   waiterOrders     Order[]         @relation("WaiterOrders")
   cashRegisters    CashRegister[]
   deliveryAssigned DeliveryOrder[] @relation("DriverDeliveries")
+  tickets          Ticket[]
+  ticketMessages   TicketMessage[]
 
   @@index([restaurantId])
   @@index([role])
@@ -605,5 +608,59 @@ model AuthLog {
   createdAt DateTime @default(now())
 
   @@index([username, createdAt])
+  @@index([createdAt])
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+}
+
+model Ticket {
+  id           String       @id @default(cuid())
+  restaurantId String
+  userId       String
+  subject      String
+  status       TicketStatus @default(OPEN)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  closedAt     DateTime?
+
+  // Relations
+  restaurant Restaurant      @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages   TicketMessage[]
+
+  @@index([restaurantId, status])
+  @@index([status])
+}
+
+model TicketMessage {
+  id        String   @id @default(cuid())
+  ticketId  String
+  userId    String
+  body      String
+  createdAt DateTime @default(now())
+
+  // Relations
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  userName   String?
+  action     String
+  targetType String?
+  targetId   String?
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([action, createdAt])
+  @@index([targetType, targetId])
   @@index([createdAt])
 }

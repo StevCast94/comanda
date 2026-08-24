@@ -9,12 +9,13 @@ import ReportsPage from "./ReportsPage";
 import InventoryPage from "./InventoryPage";
 import TablesPage from "./TablesPage";
 import EditOrderModal from "../../components/EditOrderModal";
+import TicketsPanel from "../../components/TicketsPanel";
 import {
   LogOut, LayoutDashboard, DollarSign, ShoppingCart,
   TrendingUp, Clock, CreditCard, Banknote, ArrowRightLeft,
   RefreshCw, ChefHat, HandPlatter, Users, Package,
   Settings, BarChart3, AlertCircle, CheckCircle, MapPin,
-  XCircle, Trash2, Pencil, Eye, X, Search, History, Loader2, Filter, Save,
+  XCircle, Trash2, Pencil, Eye, X, Search, History, Loader2, Filter, Save, HelpCircle,
 } from "lucide-react";
 
 interface AdminData {
@@ -32,6 +33,7 @@ const NAV_ITEMS = [
   { id: "users", label: "Usuarios", icon: Users },
   { id: "tables", label: "Mesas", icon: MapPin },
   { id: "cash", label: "Caja", icon: History },
+  { id: "tickets", label: "Soporte", icon: HelpCircle },
   { id: "settings", label: "Config.", icon: Settings },
 ];
 
@@ -436,6 +438,7 @@ export default function AdminDashboard() {
           {section === "reports" && <ReportsPage />}
           {section === "inventory" && <InventoryPage />}
           {section === "tables" && <TablesPage />}
+          {section === "tickets" && <TicketsPanel scope="admin" />}
           {section === "settings" && <ConfigPanel />}
         </main>
       </div>

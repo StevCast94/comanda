@@ -9,6 +9,7 @@ const bcrypt_1 = __importDefault(require("bcrypt"));
 const zod_1 = require("zod");
 const index_1 = require("../index");
 const auth_1 = require("../middleware/auth");
+const audit_1 = require("../lib/audit");
 const saRouter = (0, express_1.Router)();
 exports.default = saRouter;
 saRouter.use(auth_1.authenticate, (0, auth_1.authorize)("SUPERADMIN"));
@@ -136,6 +137,11 @@ saRouter.post("/restaurants", async (req, res) => {
             });
             return { restaurant, admin };
         });
+        await (0, audit_1.logAudit)({
+            userId: req.user?.userId, userName: req.user?.email,
+            action: "restaurant.create", targetType: "Restaurant", targetId: result.restaurant.id,
+            details: { name: result.restaurant.name, slug: result.restaurant.slug, plan: data.plan || "TRIAL" },
+        });
         res.status(201).json({
             message: "Restaurante creado exitosamente",
             restaurant: { id: result.restaurant.id, name: result.restaurant.name, slug: result.restaurant.slug },
@@ -179,6 +185,11 @@ saRouter.patch("/restaurants/:id/suspend", async (req, res) => {
             where: { id: req.params.id },
             data: { active: false },
         });
+        await (0, audit_1.logAudit)({
+            userId: req.user?.userId, userName: req.user?.email,
+            action: "restaurant.suspend", targetType: "Restaurant", targetId: restaurant.id,
+            details: { name: restaurant.name },
+        });
         res.json({ restaurant });
     }
     catch (err) {
@@ -192,6 +203,11 @@ saRouter.patch("/restaurants/:id/reactivate", async (req, res) => {
         const restaurant = await index_1.prisma.restaurant.update({
             where: { id: req.params.id },
             data: { active: true },
+        });
+        await (0, audit_1.logAudit)({
+            userId: req.user?.userId, userName: req.user?.email,
+            action: "restaurant.reactivate", targetType: "Restaurant", targetId: restaurant.id,
+            details: { name: restaurant.name },
         });
         res.json({ restaurant });
     }
@@ -226,11 +242,31 @@ saRouter.put("/subscriptions/:id", async (req, res) => {
                 maxCombos: limits.maxCombos,
             },
         });
+        await (0, audit_1.logAudit)({
+            userId: req.user?.userId, userName: req.user?.email,
+            action: "subscription.plan_change", targetType: "Subscription", targetId: sub.id,
+            details: { restaurantId: sub.restaurantId, newPlan: plan },
+        });
         res.json({ subscription: sub });
     }
     catch (err) {
         console.error(err);
         res.status(500).json({ error: "Error actualizando suscripción" });
+    }
+});
+// GET /api/superadmin/audit-log — log de acciones críticas
+saRouter.get("/audit-log", async (req, res) => {
+    try {
+        const limit = Math.min(parseInt(req.query.limit || "50", 10), 200);
+        const logs = await index_1.prisma.auditLog.findMany({
+            orderBy: { createdAt: "desc" },
+            take: limit,
+        });
+        res.json({ logs });
+    }
+    catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Error cargando auditoría" });
     }
 });
 // PATCH /api/superadmin/restaurants/:id � Edit restaurant details
@@ -271,8 +307,17 @@ saRouter.patch("/restaurants/:id", async (req, res) => {
 // DELETE /api/superadmin/restaurants/:id � Hard delete
 saRouter.delete("/restaurants/:id", async (req, res) => {
     try {
+        const restaurant = await index_1.prisma.restaurant.findUnique({
+            where: { id: req.params.id },
+            select: { id: true, name: true, slug: true },
+        });
         await index_1.prisma.restaurant.delete({
             where: { id: req.params.id },
+        });
+        await (0, audit_1.logAudit)({
+            userId: req.user?.userId, userName: req.user?.email,
+            action: "restaurant.delete", targetType: "Restaurant", targetId: req.params.id,
+            details: restaurant ? { name: restaurant.name, slug: restaurant.slug } : undefined,
         });
         res.json({ message: "Restaurante eliminado" });
     }
