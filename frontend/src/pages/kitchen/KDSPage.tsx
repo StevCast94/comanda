@@ -148,7 +148,7 @@ export default function KDSPage() {
                         {/* Combo selections — BIG */}
                         {hasSelections && (
                           <div className="mt-2 space-y-1">
-                            {Object.entries(item.comboSelections).map(([group, name]) => (
+                            {Object.entries(item.comboSelections ?? {}).map(([group, name]) => (
                               <p key={group} className="flex items-baseline gap-2 text-lg">
                                 <span className="font-extrabold text-accent">{group}:</span>
                                 <span className="font-semibold text-text">{name as string}</span>

@@ -209,11 +209,16 @@ export interface CashRegister {
   id: string;
   status: "OPEN" | "CLOSED";
   openedAt: string;
+  closedAt: string | null;
   openingBalance: number;
+  closingBalance: number | null;
+  expectedBalance: number | null;
   totalSales: number;
   totalCash: number;
   totalCard: number;
   totalTransfer: number;
+  totalExpenses: number;
+  notes: string | null;
   cashier?: { name: string };
 }
 

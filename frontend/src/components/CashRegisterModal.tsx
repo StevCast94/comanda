@@ -27,23 +27,6 @@ export default function CashRegisterModal({ mode, register, onSubmit, onClose }:
     } catch (err) { setError(err instanceof Error ? err.message : "Error"); } finally { setLoading(false); }
   }
 
-  async function handleSubmit() {
-    const val = parseFloat(balance);
-    if (isNaN(val) || val < 0) {
-      setError("Ingresa un monto válido");
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      await onSubmit(val, notes || undefined);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   const isClose = mode === "close";
   const expectedBalance = isClose && register
     ? register.openingBalance + register.totalSales
@@ -157,8 +140,8 @@ export default function CashRegisterModal({ mode, register, onSubmit, onClose }:
                 <div className="flex justify-between text-text-muted"><span>Efectivo</span><span>${result.verification.breakdown.cash.toFixed(2)}</span></div>
                 <div className="flex justify-between text-text-muted"><span>Tarjeta</span><span>${result.verification.breakdown.card.toFixed(2)}</span></div>
                 <div className="flex justify-between text-text-muted"><span>Transferencia</span><span>${result.verification.breakdown.transfer.toFixed(2)}</span></div>
-                <div className="flex justify-between font-bold text-text border-t border-border pt-1 mt-1"><span>Balance esperado</span><span>$${result.verification.expectedBalance.toFixed(2)}</span></div>
-                <div className="flex justify-between text-text-muted"><span>Balance declarado</span><span>$${result.verification.closingBalance.toFixed(2)}</span></div>
+                <div className="flex justify-between font-bold text-text border-t border-border pt-1 mt-1"><span>Balance esperado</span><span>${result.verification.expectedBalance.toFixed(2)}</span></div>
+                <div className="flex justify-between text-text-muted"><span>Balance declarado</span><span>${result.verification.closingBalance.toFixed(2)}</span></div>
                 {result.verification.closingDiscrepancy !== 0 && (
                   <div className="flex justify-between text-danger font-bold"><span>Diferencia</span><span>{result.verification.closingDiscrepancy > 0 ? "+" : ""}${result.verification.closingDiscrepancy.toFixed(2)}</span></div>
                 )}
