@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import path from "path";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { PrismaClient } from "@prisma/client";
 import { errorHandler } from "./middleware/errorHandler";
 import authRoutes from "./routes/auth";
@@ -80,7 +80,7 @@ app.use(rateLimit({
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
-  keyGenerator: (req) => `${req.ip}:${req.body?.username ?? ""}`,
+  keyGenerator: (req) => `${ipKeyGenerator(req.ip ?? "")}:${req.body?.username ?? ""}`,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Demasiados intentos. Espera 15 minutos." },
