@@ -84,6 +84,16 @@ const loginLimiter = (0, express_rate_limit_1.default)({
     message: { error: "Demasiados intentos. Espera 15 minutos." },
 });
 app.use("/api/auth/login", loginLimiter);
+// ─── Health check ────────────────────────────────────────────
+app.get("/api/health", async (_req, res) => {
+    try {
+        await exports.prisma.$queryRaw `SELECT 1`;
+        res.json({ status: "ok", db: "ok", uptime: process.uptime() });
+    }
+    catch {
+        res.status(503).json({ status: "error", db: "unreachable" });
+    }
+});
 // ─── API Routes ─────────────────────────────────────────────
 app.use("/api/auth", auth_1.default);
 app.use("/api/register", register_1.default);

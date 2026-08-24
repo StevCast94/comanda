@@ -87,6 +87,16 @@ const loginLimiter = rateLimit({
 });
 app.use("/api/auth/login", loginLimiter);
 
+// ─── Health check ────────────────────────────────────────────
+app.get("/api/health", async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: "ok", db: "ok", uptime: process.uptime() });
+  } catch {
+    res.status(503).json({ status: "error", db: "unreachable" });
+  }
+});
+
 // ─── API Routes ─────────────────────────────────────────────
 app.use("/api/auth", authRoutes);
 app.use("/api/register", registerRoutes);
