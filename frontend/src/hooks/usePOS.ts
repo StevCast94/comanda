@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import type {
   Category, MenuItem, Combo, Table, CartItem,
-  CashRegister, PaymentMethod, KitchenStation, RestaurantSettings,
+  CashRegister, PaymentMethod, KitchenStation, RestaurantSettings, DeliveryZone,
 } from "../types";
 import * as api from "../services/api";
 
@@ -15,6 +15,10 @@ interface POSState {
   selectedTable: Table | null;
   customerName: string;
   orderType: "DINE_IN" | "TAKEAWAY" | "DELIVERY";
+  customerAddress: string;
+  customerPhone: string;
+  deliveryZoneId: string | null;
+  deliveryZones: DeliveryZone[];
   cashRegister: CashRegister | null;
   settings: RestaurantSettings;
   loading: boolean;
@@ -40,6 +44,10 @@ export function usePOS() {
     selectedTable: null,
     customerName: "",
     orderType: "DINE_IN",
+    customerAddress: "",
+    customerPhone: "",
+    deliveryZoneId: null,
+    deliveryZones: [],
     cashRegister: null,
     settings: defaultSettings,
     loading: true,
@@ -56,13 +64,14 @@ export function usePOS() {
   useEffect(() => {
     async function load() {
       try {
-        const [catRes, prodRes, comboRes, tableRes, crRes, restRes] = await Promise.all([
+        const [catRes, prodRes, comboRes, tableRes, crRes, restRes, zoneRes] = await Promise.all([
           api.categories.list(),
           api.products.list({ active: true }),
           api.combos.list(),
           api.settings.tables(),
           api.cashRegister.current(),
           api.settings.restaurant(),
+          api.delivery.zones(),
         ]);
         setState((s) => ({
           ...s,
@@ -71,6 +80,7 @@ export function usePOS() {
           combos: comboRes.combos,
           tables: tableRes.data,
           cashRegister: crRes.register,
+          deliveryZones: zoneRes.zones,
           settings: (restRes?.restaurant?.settings as RestaurantSettings) || defaultSettings,
           selectedCategory: catRes.categories[0]?.id || null,
           loading: false,
@@ -204,7 +214,10 @@ export function usePOS() {
   }, []);
 
   const clearCart = useCallback(() => {
-    setState((s) => ({ ...s, cart: [], selectedTable: null, customerName: "" }));
+    setState((s) => ({
+      ...s, cart: [], selectedTable: null, customerName: "",
+      customerAddress: "", customerPhone: "", deliveryZoneId: null,
+    }));
   }, []);
 
   // ─── Totals ───────────────────────────────────────────────
@@ -228,6 +241,10 @@ export function usePOS() {
       set("error", "Selecciona una mesa");
       return;
     }
+    if (state.orderType === "DELIVERY" && (!state.customerAddress.trim() || !state.customerPhone.trim())) {
+      set("error", "Dirección y teléfono requeridos para delivery");
+      return;
+    }
     if (!state.cashRegister) {
       set("error", "No hay caja abierta");
       return;
@@ -241,6 +258,9 @@ export function usePOS() {
         orderType: state.orderType,
         status: "PAID" as const,
         paymentMethod,
+        customerAddress: state.orderType === "DELIVERY" ? state.customerAddress : undefined,
+        customerPhone: state.orderType === "DELIVERY" ? state.customerPhone : undefined,
+        deliveryZoneId: state.orderType === "DELIVERY" ? state.deliveryZoneId || undefined : undefined,
         items: state.cart.map((c) => ({
           menuItemId: c.menuItemId,
           comboId: c.comboId,
@@ -261,13 +281,17 @@ export function usePOS() {
     } finally {
       setSubmitting(false);
     }
-  }, [state.cart, state.selectedTable, state.customerName, state.orderType, state.cashRegister, clearCart, set]);
+  }, [state.cart, state.selectedTable, state.customerName, state.orderType, state.customerAddress, state.customerPhone, state.deliveryZoneId, state.cashRegister, clearCart, set]);
 
   // Submit order as PENDING (waiter mode — no payment, no cash register)
   const submitPendingOrder = useCallback(async () => {
     if (state.cart.length === 0) return;
     if (state.orderType === "DINE_IN" && !state.selectedTable) {
       set("error", "Selecciona una mesa");
+      return;
+    }
+    if (state.orderType === "DELIVERY" && (!state.customerAddress.trim() || !state.customerPhone.trim())) {
+      set("error", "Dirección y teléfono requeridos para delivery");
       return;
     }
 
@@ -278,6 +302,9 @@ export function usePOS() {
         customerName: state.customerName || undefined,
         orderType: state.orderType,
         status: "PENDING" as const,
+        customerAddress: state.orderType === "DELIVERY" ? state.customerAddress : undefined,
+        customerPhone: state.orderType === "DELIVERY" ? state.customerPhone : undefined,
+        deliveryZoneId: state.orderType === "DELIVERY" ? state.deliveryZoneId || undefined : undefined,
         items: state.cart.map((c) => ({
           menuItemId: c.menuItemId,
           comboId: c.comboId,
@@ -298,7 +325,7 @@ export function usePOS() {
     } finally {
       setSubmitting(false);
     }
-  }, [state.cart, state.selectedTable, state.customerName, state.orderType, clearCart, set]);
+  }, [state.cart, state.selectedTable, state.customerName, state.orderType, state.customerAddress, state.customerPhone, state.deliveryZoneId, clearCart, set]);
 
   // ─── Cash register operations ─────────────────────────────
   const openCashRegister = useCallback(async (balance: number) => {

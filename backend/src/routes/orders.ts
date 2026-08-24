@@ -16,6 +16,9 @@ const createOrderSchema = ordZ.object({
   paymentMethod: ordZ.enum(["CASH", "CARD", "TRANSFER"]).optional(),
   waiterId: ordZ.string().optional(),
   notes: ordZ.string().optional(),
+  customerAddress: ordZ.string().optional(),
+  customerPhone: ordZ.string().optional(),
+  deliveryZoneId: ordZ.string().optional(),
   items: ordZ.array(ordZ.object({
     menuItemId: ordZ.string().optional(),
     comboId: ordZ.string().optional(),
@@ -42,6 +45,12 @@ ordRouter.post("/", ordAuthz("CASHIER", "ADMIN", "WAITER"), async (req: OrdReq, 
     // Validate DINE_IN requires table
     if (data.orderType === "DINE_IN" && !data.tableId) {
       res.status(400).json({ error: "Mesa requerida para pedidos en salón" });
+      return;
+    }
+
+    // Validate DELIVERY requires address + phone
+    if (data.orderType === "DELIVERY" && (!data.customerAddress || !data.customerPhone)) {
+      res.status(400).json({ error: "Dirección y teléfono requeridos para pedidos a domicilio" });
       return;
     }
 
@@ -100,32 +109,55 @@ ordRouter.post("/", ordAuthz("CASHIER", "ADMIN", "WAITER"), async (req: OrdReq, 
     });
     const orderNumber = (lastOrder?.orderNumber ?? 0) + 1;
 
-    const order = await ordPrisma.order.create({
-      data: {
-        orderNumber,
-        restaurantId: rId,
-        tableId: data.tableId || null,
-        customerName: data.customerName,
-        orderType: data.orderType,
-        status: isPending ? "PENDING" : "PAID",
-        subtotal,
-        taxRate,
-        taxAmount,
-        serviceRate,
-        serviceAmount,
-        total,
-        paymentMethod: isPending ? null : data.paymentMethod!,
-        cashierId: req.user!.userId,
-        waiterId: data.waiterId || (req.user!.role === "WAITER" ? req.user!.userId : null),
-        paidAt: isPending ? null : new Date(),
-        notes: data.notes,
-        items: { create: orderItems },
-      },
-      include: {
-        items: { include: { menuItem: true, combo: true } },
-        table: true,
-        waiter: { select: { name: true } },
-      },
+    const order = await ordPrisma.$transaction(async (tx) => {
+      const o = await tx.order.create({
+        data: {
+          orderNumber,
+          restaurantId: rId,
+          tableId: data.tableId || null,
+          customerName: data.customerName,
+          orderType: data.orderType,
+          status: isPending ? "PENDING" : "PAID",
+          subtotal,
+          taxRate,
+          taxAmount,
+          serviceRate,
+          serviceAmount,
+          total,
+          paymentMethod: isPending ? null : data.paymentMethod!,
+          cashierId: req.user!.userId,
+          waiterId: data.waiterId || (req.user!.role === "WAITER" ? req.user!.userId : null),
+          paidAt: isPending ? null : new Date(),
+          notes: data.notes,
+          items: { create: orderItems },
+        },
+        include: {
+          items: { include: { menuItem: true, combo: true } },
+          table: true,
+          waiter: { select: { name: true } },
+        },
+      });
+
+      if (data.orderType === "DELIVERY") {
+        let deliveryFee = 0;
+        if (data.deliveryZoneId) {
+          const zone = await tx.deliveryZone.findFirst({
+            where: { id: data.deliveryZoneId, restaurantId: rId },
+          });
+          if (zone) deliveryFee = zone.fee;
+        }
+        await tx.deliveryOrder.create({
+          data: {
+            orderId: o.id,
+            customerAddress: data.customerAddress!,
+            customerPhone: data.customerPhone!,
+            deliveryZoneId: data.deliveryZoneId || null,
+            deliveryFee,
+          },
+        });
+      }
+
+      return o;
     });
 
     // Update cash register totals only for paid orders

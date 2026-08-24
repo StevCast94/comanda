@@ -18,6 +18,9 @@ const createOrderSchema = zod_1.z.object({
     paymentMethod: zod_1.z.enum(["CASH", "CARD", "TRANSFER"]).optional(),
     waiterId: zod_1.z.string().optional(),
     notes: zod_1.z.string().optional(),
+    customerAddress: zod_1.z.string().optional(),
+    customerPhone: zod_1.z.string().optional(),
+    deliveryZoneId: zod_1.z.string().optional(),
     items: zod_1.z.array(zod_1.z.object({
         menuItemId: zod_1.z.string().optional(),
         comboId: zod_1.z.string().optional(),
@@ -42,6 +45,11 @@ ordRouter.post("/", (0, auth_1.authorize)("CASHIER", "ADMIN", "WAITER"), async (
         // Validate DINE_IN requires table
         if (data.orderType === "DINE_IN" && !data.tableId) {
             res.status(400).json({ error: "Mesa requerida para pedidos en salón" });
+            return;
+        }
+        // Validate DELIVERY requires address + phone
+        if (data.orderType === "DELIVERY" && (!data.customerAddress || !data.customerPhone)) {
+            res.status(400).json({ error: "Dirección y teléfono requeridos para pedidos a domicilio" });
             return;
         }
         // Payment required unless PENDING
@@ -93,32 +101,54 @@ ordRouter.post("/", (0, auth_1.authorize)("CASHIER", "ADMIN", "WAITER"), async (
             select: { orderNumber: true },
         });
         const orderNumber = (lastOrder?.orderNumber ?? 0) + 1;
-        const order = await index_1.prisma.order.create({
-            data: {
-                orderNumber,
-                restaurantId: rId,
-                tableId: data.tableId || null,
-                customerName: data.customerName,
-                orderType: data.orderType,
-                status: isPending ? "PENDING" : "PAID",
-                subtotal,
-                taxRate,
-                taxAmount,
-                serviceRate,
-                serviceAmount,
-                total,
-                paymentMethod: isPending ? null : data.paymentMethod,
-                cashierId: req.user.userId,
-                waiterId: data.waiterId || (req.user.role === "WAITER" ? req.user.userId : null),
-                paidAt: isPending ? null : new Date(),
-                notes: data.notes,
-                items: { create: orderItems },
-            },
-            include: {
-                items: { include: { menuItem: true, combo: true } },
-                table: true,
-                waiter: { select: { name: true } },
-            },
+        const order = await index_1.prisma.$transaction(async (tx) => {
+            const o = await tx.order.create({
+                data: {
+                    orderNumber,
+                    restaurantId: rId,
+                    tableId: data.tableId || null,
+                    customerName: data.customerName,
+                    orderType: data.orderType,
+                    status: isPending ? "PENDING" : "PAID",
+                    subtotal,
+                    taxRate,
+                    taxAmount,
+                    serviceRate,
+                    serviceAmount,
+                    total,
+                    paymentMethod: isPending ? null : data.paymentMethod,
+                    cashierId: req.user.userId,
+                    waiterId: data.waiterId || (req.user.role === "WAITER" ? req.user.userId : null),
+                    paidAt: isPending ? null : new Date(),
+                    notes: data.notes,
+                    items: { create: orderItems },
+                },
+                include: {
+                    items: { include: { menuItem: true, combo: true } },
+                    table: true,
+                    waiter: { select: { name: true } },
+                },
+            });
+            if (data.orderType === "DELIVERY") {
+                let deliveryFee = 0;
+                if (data.deliveryZoneId) {
+                    const zone = await tx.deliveryZone.findFirst({
+                        where: { id: data.deliveryZoneId, restaurantId: rId },
+                    });
+                    if (zone)
+                        deliveryFee = zone.fee;
+                }
+                await tx.deliveryOrder.create({
+                    data: {
+                        orderId: o.id,
+                        customerAddress: data.customerAddress,
+                        customerPhone: data.customerPhone,
+                        deliveryZoneId: data.deliveryZoneId || null,
+                        deliveryFee,
+                    },
+                });
+            }
+            return o;
         });
         // Update cash register totals only for paid orders
         if (!isPending && openRegister) {

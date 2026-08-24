@@ -158,6 +158,38 @@ export interface Order {
   waiter?: { name: string } | null;
 }
 
+// ─── Delivery ───────────────────────────────────────────────
+
+export type DeliveryStatus = "ASSIGNED" | "PICKED_UP" | "IN_TRANSIT" | "DELIVERED";
+
+export interface DeliveryZone {
+  id: string;
+  name: string;
+  fee: number;
+  estimatedMin: number;
+  active: boolean;
+}
+
+export interface DeliveryOrder {
+  id: string;
+  orderId: string;
+  driverId: string | null;
+  customerAddress: string;
+  customerPhone: string;
+  deliveryZoneId: string | null;
+  status: DeliveryStatus;
+  estimatedTime: number | null;
+  actualDeliveryTime: string | null;
+  deliveryFee: number;
+  notes: string | null;
+  createdAt: string;
+  order: Pick<Order, "id" | "orderNumber" | "customerName" | "total" | "createdAt"> & {
+    items: OrderItem[];
+  };
+  driver: { id: string; name: string } | null;
+  deliveryZone: { id: string; name: string; fee: number } | null;
+}
+
 // ─── POS Local State (not from API) ────────────────────────
 
 export interface CartItem {

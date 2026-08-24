@@ -7,6 +7,7 @@ import RegisterPage from "./pages/RegisterPage";
 import POSPage from "./pages/pos/POSPage";
 import KDSPage from "./pages/kitchen/KDSPage";
 import WaiterPage from "./pages/waiter/WaiterPage";
+import DeliveryPage from "./pages/delivery/DeliveryPage";
 import AdminDashboard from "./pages/admin/DashboardPage";
 import SuperAdminPage from "./pages/superadmin/SuperDashboardPage";
 import { Lock, Sun, Moon } from "lucide-react";
@@ -118,7 +119,7 @@ function AppRouter() {
     if (route.startsWith("/superadmin"))
       return <Protected roles={["SUPERADMIN"]}><SuperAdminPage /></Protected>;
     if (route === "/delivery")
-      return <Protected roles={["DELIVERY", "ADMIN"]}><div className="p-8 text-text-muted">Panel Delivery — Fase 3</div></Protected>;
+      return <Protected roles={["DELIVERY", "ADMIN"]}><DeliveryPage /></Protected>;
 
     return <NotFound />;
   }, [route]);

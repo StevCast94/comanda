@@ -369,6 +369,10 @@ export default function POSPage() {
             selectedTable={pos.selectedTable}
             customerName={pos.customerName}
             orderType={pos.orderType}
+            customerAddress={pos.customerAddress}
+            customerPhone={pos.customerPhone}
+            deliveryZoneId={pos.deliveryZoneId}
+            deliveryZones={pos.deliveryZones}
             totals={pos.totals}
             settings={pos.settings}
             products={pos.products}
@@ -376,6 +380,9 @@ export default function POSPage() {
             onSelectTable={(t) => pos.set("selectedTable", t)}
             onSetCustomerName={(n) => pos.set("customerName", n)}
             onSetOrderType={(t) => pos.set("orderType", t)}
+            onSetCustomerAddress={(a) => pos.set("customerAddress", a)}
+            onSetCustomerPhone={(p) => pos.set("customerPhone", p)}
+            onSetDeliveryZoneId={(id) => pos.set("deliveryZoneId", id)}
             onUpdateQuantity={pos.updateQuantity}
             onRemoveItem={pos.removeItem}
             onUpdateNotes={pos.updateItemNotes}

@@ -1,7 +1,7 @@
 import { useState } from "react";
-import type { CartItem, Table, MenuItem, PaymentMethod, RestaurantSettings } from "../types";
+import type { CartItem, Table, MenuItem, PaymentMethod, RestaurantSettings, DeliveryZone } from "../types";
 import {
-  Minus, Plus, Trash2, X, MapPin, User, ChevronDown,
+  Minus, Plus, Trash2, X, MapPin, User, ChevronDown, Phone,
   Banknote, CreditCard, ArrowRightLeft, Loader2, CheckCircle,
   StickyNote, ShoppingBag, UtensilsCrossed, Truck,
 } from "lucide-react";
@@ -12,6 +12,10 @@ interface Props {
   selectedTable: Table | null;
   customerName: string;
   orderType: "DINE_IN" | "TAKEAWAY" | "DELIVERY";
+  customerAddress: string;
+  customerPhone: string;
+  deliveryZoneId: string | null;
+  deliveryZones: DeliveryZone[];
   totals: { subtotal: number; taxAmount: number; serviceAmount: number; total: number };
   settings: RestaurantSettings;
   products: MenuItem[];
@@ -19,6 +23,9 @@ interface Props {
   onSelectTable: (t: Table | null) => void;
   onSetCustomerName: (n: string) => void;
   onSetOrderType: (t: "DINE_IN" | "TAKEAWAY" | "DELIVERY") => void;
+  onSetCustomerAddress: (a: string) => void;
+  onSetCustomerPhone: (p: string) => void;
+  onSetDeliveryZoneId: (id: string | null) => void;
   onUpdateQuantity: (tempId: string, delta: number) => void;
   onRemoveItem: (tempId: string) => void;
   onUpdateNotes: (tempId: string, notes: string) => void;
@@ -34,9 +41,12 @@ const ORDER_TYPES = [
 ];
 
 export default function OrderPanel({
-  cart, tables, selectedTable, customerName, orderType, totals, settings,
+  cart, tables, selectedTable, customerName, orderType,
+  customerAddress, customerPhone, deliveryZoneId, deliveryZones,
+  totals, settings,
   products, submitting,
   onSelectTable, onSetCustomerName, onSetOrderType,
+  onSetCustomerAddress, onSetCustomerPhone, onSetDeliveryZoneId,
   onUpdateQuantity, onRemoveItem, onUpdateNotes, onToggleModifier,
   onClearCart, onSubmitOrder,
 }: Props) {
@@ -125,6 +135,44 @@ export default function OrderPanel({
                   </div>
                 ))}
               </div>
+            )}
+          </div>
+        )}
+
+        {/* Delivery fields (only for DELIVERY) */}
+        {orderType === "DELIVERY" && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2">
+              <MapPin className="h-4 w-4 text-text-muted" />
+              <input
+                type="text"
+                value={customerAddress}
+                onChange={(e) => onSetCustomerAddress(e.target.value)}
+                placeholder="Dirección de entrega"
+                className="flex-1 bg-transparent text-sm text-text outline-none"
+              />
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2">
+              <Phone className="h-4 w-4 text-text-muted" />
+              <input
+                type="tel"
+                value={customerPhone}
+                onChange={(e) => onSetCustomerPhone(e.target.value)}
+                placeholder="Teléfono de contacto"
+                className="flex-1 bg-transparent text-sm text-text outline-none"
+              />
+            </div>
+            {deliveryZones.length > 0 && (
+              <select
+                value={deliveryZoneId ?? ""}
+                onChange={(e) => onSetDeliveryZoneId(e.target.value || null)}
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text outline-none"
+              >
+                <option value="">Sin zona (envío $0.00)</option>
+                {deliveryZones.map((z) => (
+                  <option key={z.id} value={z.id}>{z.name} — ${z.fee.toFixed(2)}</option>
+                ))}
+              </select>
             )}
           </div>
         )}

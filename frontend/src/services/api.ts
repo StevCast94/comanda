@@ -139,6 +139,7 @@ export const orders = {
     status?: "PENDING" | "PAID";
     paymentMethod?: string; notes?: string;
     waiterId?: string;
+    customerAddress?: string; customerPhone?: string; deliveryZoneId?: string;
     items: Array<{
       menuItemId?: string; comboId?: string; quantity: number; unitPrice: number;
       notes?: string; kitchen: string;
@@ -217,6 +218,26 @@ export const waiter = {
   pending: () => request<{ orders: import("../types").Order[] }>("/waiter/pending"),
   deliver: (orderId: string) =>
     request<{ order: import("../types").Order }>(`/waiter/deliver/${orderId}`, { method: "PATCH" }),
+};
+
+// ─── Delivery ───────────────────────────────────────────────
+
+export const delivery = {
+  zones: () => request<{ zones: import("../types").DeliveryZone[] }>("/delivery/zones"),
+  createZone: (data: { name: string; fee: number; estimatedMin?: number }) =>
+    request<{ zone: import("../types").DeliveryZone }>("/delivery/zones", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  drivers: () => request<{ drivers: Array<{ id: string; name: string }> }>("/delivery/drivers"),
+  pending: () => request<{ deliveries: import("../types").DeliveryOrder[] }>("/delivery/pending"),
+  assign: (id: string, driverId: string) =>
+    request<{ delivery: import("../types").DeliveryOrder }>(`/delivery/${id}/assign`, {
+      method: "PATCH",
+      body: JSON.stringify({ driverId }),
+    }),
+  advance: (id: string) =>
+    request<{ delivery: import("../types").DeliveryOrder }>(`/delivery/${id}/advance`, { method: "PATCH" }),
 };
 
 // ─── Cash Register ──────────────────────────────────────────
