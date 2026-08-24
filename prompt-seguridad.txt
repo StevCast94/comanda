@@ -1,0 +1,192 @@
+# PROMPT PARA CLAUDE — Comanda · Hardening de Seguridad (S1-S9)
+
+> **Objetivo:** Implementar los 9 fixes de seguridad diagnosticados en `AUDITORIA_SEGURIDAD.md`. Cambios chicos y localizados. Nada de features nuevas.
+> **Contexto:** El MVP está en producción con demos activas. Solo tocar archivos de seguridad. Riesgo mínimo, deploy seguro.
+> **IMPORTANTE:** Leer TODO este prompt + `AUDITORIA_SEGURIDAD.md` + `changelog-comanda.txt` antes de escribir código.
+
+---
+
+## 1. REGLAS DE ORO PARA ESTE PROMPT
+
+1. **SOLO archivos listados abajo.** No tocar nada más.
+2. **Commits atómicos** — un commit por fix, o máximo 2-3 fixes relacionados.
+3. **No romper la demo** — el POS, KDS, Waiter deben seguir funcionando igual.
+4. **Probar que compila** antes de commitear.
+5. **Mensajes descriptivos** — `security: backup privado Cloudinary`, `security: helmet + security headers`.
+
+---
+
+## 2. FIXES A IMPLEMENTAR
+
+### S1 — 🔴 Backup CIFRADO/PRIVADO
+**Archivo:** `backend/scripts/backup.ts`
+**Diagnóstico:** El dump se sube a Cloudinary con `type: "upload"` — acceso público. URL predecible permite descargar la BD completa.
+**Fix:** Subir con `type: "private"`. Agregar `type: "private"` en las opciones de upload de Cloudinary en el script.
+**Verificación:** Acceder a la URL del último backup sin auth → debe devolver 404/403.
+**Commit:** `security: backup privado en Cloudinary (type: private)`
+
+### S2 — 🔴 Helmet + Security Headers
+**Archivo:** `backend/src/index.ts`
+**Diagnóstico:** Sin helmet → sin HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy.
+**Fix:**
+```ts
+import helmet from "helmet";
+// Antes de las rutas:
+app.use(helmet({
+  contentSecurityPolicy: false, // CSP se define aparte en S6
+  hsts: { maxAge: 15552000, includeSubDomains: true },
+}));
+```
+**Commit:** `security: helmet con HSTS y security headers`
+
+### S3 — 🔴 Rate-limit en /login
+**Archivo:** `backend/src/index.ts`
+**Diagnóstico:** Solo rate-limit global de 300 req/min. Login comparte ese límite → fuerza bruta posible.
+**Fix:** Limiter dedicado ANTES de la ruta /api/auth:
+```ts
+import rateLimit from "express-rate-limit"; // ya existe el import
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  keyGenerator: (req) => `${req.ip}:${req.body?.username ?? ""}`,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Demasiados intentos. Espera 15 minutos." },
+});
+app.use("/api/auth/login", loginLimiter);
+```
+**IMPORTANTE:** Ponerlo DESPUÉS de `app.use(express.json())` y `trust proxy`, pero ANTES de `app.use("/api/auth", authRoutes)`.
+**Commit:** `security: rate-limit dedicado en login (10/15min)`
+
+### S4 — 🟡 CORS whitelist
+**Archivo:** `backend/src/index.ts`
+**Diagnóstico:** `cors({ origin: true })` permite cualquier origen.
+**Fix:**
+```ts
+const allowedOrigins = (process.env.CORS_ORIGINS ?? "https://comanda.one").split(",");
+app.use(cors({
+  origin: (o, cb) => {
+    if (!o || allowedOrigins.includes(o)) return cb(null, true);
+    cb(new Error("CORS not allowed"));
+  },
+  credentials: true,
+}));
+```
+**Commit:** `security: CORS whitelist en vez de origin:true`
+
+### S5 — 🟡 tokenVersion (revocación al cambiar contraseña)
+**Archivos:** `backend/prisma/schema.prisma` + `backend/src/middleware/auth.ts` + `backend/src/routes/auth.ts`
+**Diagnóstico:** Al cambiar contraseña, los JWT ya emitidos siguen válidos hasta su expiración.
+**Fix:**
+1. Schema: agregar `tokenVersion Int @default(0)` al modelo `User`
+2. JWT payload: incluir `tokenVersion` al firmar (`signToken`)
+3. Middleware `authenticate`: comparar `payload.tokenVersion` con `user.tokenVersion`. Si no coinciden → 401.
+4. Ruta `/change-password`: incrementar `tokenVersion` después de actualizar el hash.
+**Commit:** `security: tokenVersion para revocar JWTs al cambiar contraseña`
+
+### S6 — 🟡 Content Security Policy (CSP)
+**Archivo:** `backend/src/index.ts`
+**Diagnóstico:** Sin CSP → ante un XSS no hay contención.
+**Fix:** Después de Helmet:
+```ts
+app.use(helmet.contentSecurityPolicy({
+  directives: {
+    defaultSrc: ["'self'"],
+    scriptSrc: ["'self'"],
+    styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+    fontSrc: ["'self'", "https://fonts.gstatic.com"],
+    imgSrc: ["'self'", "data:", "https://res.cloudinary.com"],
+    connectSrc: ["'self'"],
+    frameAncestors: ["'none'"],
+  },
+}));
+```
+⚠️ `'unsafe-inline'` en styles es necesario para Tailwind. Probar que la app carga bien en staging antes de mergear.
+**Commit:** `security: Content Security Policy (CSP) configurado`
+
+### S7 — 🟡 AuthLog (registro de logins fallidos)
+**Archivos:** `backend/prisma/schema.prisma` + `backend/src/routes/auth.ts`
+**Diagnóstico:** No se registran intentos fallidos de login → ataques invisibles.
+**Fix:**
+1. Schema: modelo `AuthLog { id String @id @default(cuid()), userId String?, ip String?, success Boolean, userAgent String?, createdAt DateTime @default(now()) }`
+2. Ruta login: después de cada intento (éxito o fallo), insertar en `AuthLog`.
+3. Si hay ≥10 fallos para el mismo username en 15min, `console.error` (alerta futura para SUPERADMIN).
+**Commit:** `security: AuthLog para tracking de intentos de login`
+
+### S8 — 🟡 Anti-bot en /register y /leads
+**Archivos:** `backend/src/routes/register.ts` + `backend/src/routes/leads.ts`
+**Diagnóstico:** Endpoints públicos sin protección anti-bot. Pueden crear restaurantes basura masivamente.
+**Fix (sin dependencias externas):**
+1. Agregar campo `honeypot` oculto en ambos endpoints. Si el campo tiene valor → es bot → rechazar silenciosamente (devolver 200 pero no procesar).
+2. Rate-limit dedicado: 5 req/15min por IP en cada ruta.
+3. Dejar un hook/documentación para agregar Turnstile/hCaptcha en el futuro.
+**Commit:** `security: honeypot + rate-limit en /register y /leads`
+
+### S9 — 🟡 Política de contraseñas (hardening)
+**Archivos:** `backend/src/routes/auth.ts` + `backend/src/routes/register.ts`
+**Diagnóstico:** bcrypt 10 rounds. Contraseña mínima 6 caracteres. Sin blacklist.
+**Fix:**
+1. bcrypt: cambiar `saltRounds` de 10 a **12** en todas las llamadas a `bcrypt.hash()` y `bcrypt.compare()`.
+2. Validación: mínimo **8 caracteres** (cambiar todas las validaciones `.min(6)` a `.min(8)`).
+3. Agregar validación contra contraseñas comunes: crear archivo `backend/src/lib/commonPasswords.ts` con el top-50 (admin, password, 123456, comanda, etc). Rechazar si la contraseña está en la lista.
+**Commit:** `security: bcrypt 12 rounds + min 8 chars + blacklist comunes`
+
+---
+
+## 3. ARCHIVOS A MODIFICAR (total: 7)
+
+| Archivo | Fixes |
+|---------|-------|
+| `backend/src/index.ts` | S2 (helmet), S3 (login rate-limit), S4 (CORS), S6 (CSP) |
+| `backend/scripts/backup.ts` | S1 (backup privado) |
+| `backend/src/routes/auth.ts` | S5 (tokenVersion), S7 (AuthLog), S9 (bcrypt+min chars) |
+| `backend/src/routes/register.ts` | S8 (honeypot+rate-limit), S9 (bcrypt+min chars) |
+| `backend/src/routes/leads.ts` | S8 (honeypot+rate-limit) |
+| `backend/src/middleware/auth.ts` | S5 (tokenVersion verify) |
+| `backend/prisma/schema.prisma` | S5 (tokenVersion en User), S7 (model AuthLog) |
+| `backend/src/lib/commonPasswords.ts` | S9 (NUEVO — lista de contraseñas bloqueadas) |
+
+---
+
+## 4. ARCHIVOS QUE NO SE TOCAN
+
+- ❌ POS, KDS, Waiter, Delivery
+- ❌ Menú, categorías, productos, combos
+- ❌ Órdenes (Order model)
+- ❌ Landing page
+- ❌ Frontend (ningún archivo)
+- ❌ Seed
+
+---
+
+## 5. ORDEN DE EJECUCIÓN RECOMENDADO
+
+1. **Commit 1:** S1 (backup privado) — urgente, es el agujero más grave
+2. **Commit 2:** S2+S3+S4+S6 (index.ts — helmet, login limiter, CORS, CSP) — cambios en el mismo archivo
+3. **Commit 3:** S5 (schema.prisma tokenVersion + middleware auth + auth.ts change-password) — requiere migración
+4. **Commit 4:** S7 (AuthLog) — requiere migración
+5. **Commit 5:** S8 (register + leads honeypot) — independiente
+6. **Commit 6:** S9 (bcrypt rounds + min chars + blacklist) — independiente
+
+Si prefieres agrupar: S1+S2+S3+S4+S6+S8+S9 en un commit (no requieren migración), y S5+S7 en otro (requieren `prisma db push`).
+
+---
+
+## 6. ENTREGABLES
+
+- [ ] Backup privado verificado (URL sin auth → 404/403)
+- [ ] Helmet con HSTS activo (verificar headers HTTP)
+- [ ] Rate-limit en /login funcional (probar con 11 intentos)
+- [ ] CORS solo permite comanda.one
+- [ ] CSP headers presentes
+- [ ] tokenVersion en JWT + revocación al cambiar contraseña
+- [ ] AuthLog con registros de intentos de login
+- [ ] Honeypot + rate-limit en register y leads
+- [ ] bcrypt 12 rounds, min 8 chars, blacklist de comunes
+- [ ] Código compilando sin errores TypeScript
+- [ ] Build local exitoso en frontend
+
+---
+
+*Prompt generado por Timmy ⚡ — Comanda Hardening Seguridad — 2026-06-04*

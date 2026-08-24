@@ -1,0 +1,97 @@
+# PROMPT PARA CLAUDE — Comanda Fase: Producción Multi-Tenant
+
+> **Objetivo:** Adaptar Comanda para producción real con múltiples restaurantes, SUPERADMIN central, y gestión de usuarios operativos sin email.
+> **Prerrequisito:** Los 9 fixes de seguridad (`prompt-seguridad.txt`) YA deben estar implementados y desplegados.
+> **Contexto:** El MVP actual funciona con un solo restaurante. Ahora escalamos a multi-tenant real con 2 clientes para empezar, diseñado para decenas.
+> **IMPORTANTE:** Leer TODO este prompt, `changelog-comanda.txt`, y `AUDITORIA_SEGURIDAD.md` antes de escribir.
+
+---
+
+## 1. LO QUE YA EXISTE
+
+### Schema
+- User, Restaurant, Subscription, roles (SUPERADMIN a DELIVERY)
+- POS, KDS, Waiter, MenuItem, Order, Category, Modifier — funcionales
+
+### Auth
+- JWT con bcrypt. `signToken()`, `authenticate()`, `authorize()` listos.
+
+### Seguridad
+- ✅ Helmet, CSP, CORS whitelist, rate-limit login, tokenVersion, AuthLog, honeypot, bcrypt 12 rounds (implementado en prompt-seguridad.txt)
+
+---
+
+## 2. LO QUE HAY QUE CONSTRUIR
+
+### A. Login Unificado (email O username)
+**Archivo:** `backend/src/routes/auth.ts`
+```
+POST /api/auth/login  { email?: string, username?: string, password: string }
+→ Buscar por email o username → bcrypt verify → JWT con { userId, restaurantId, role }
+→ Si user.active === false → 403
+→ Actualizar lastLogin
+```
+
+### B. Panel SUPERADMIN
+**Ruta:** `/superadmin`
+**5 secciones:**
+- **B1. Restaurantes** — CRUD completo (crear = auto-crea Restaurant + User ADMIN)
+- **B2. Suscripciones** — ver/cambiar plan (TRIAL ↔ ACTIVE ↔ CANCELLED)
+- **B3. Tickets soporte** — modelo `SupportTicket`, ADMIN crea → SUPERADMIN responde
+- **B4. Métricas globales** — restaurantes activos, revenue total, pedidos hoy
+- **B5. Auditoría** — log de acciones críticas
+
+### C. Panel ADMIN de Restaurante
+**Ruta:** `/admin`
+- **C1. Usuarios operativos** — crear con username+password+role (sin email)
+- **C2. Tickets soporte** — crear/ver historial
+- **C3. Métricas** — pedidos, revenue, usuarios activos
+
+### D. Endpoint /api/metrics (para Matrix)
+**Ruta:** `GET /api/metrics` (público)
+```json
+{ "restaurants_total": N, "restaurants_active": N, "users_total": N, "orders_today": N, "revenue_today": "$N.NN", "revenue_month": "$N.NN", "subscriptions_trial": N, "subscriptions_active": N, "support_tickets_open": N, "updated_at": "ISO" }
+```
+
+### E. Redirección por Rol
+SUPERADMIN→/superadmin, ADMIN→/admin, CASHIER→/pos, COOK→/kitchen, WAITER→/waiter, DELIVERY→/delivery
+
+### F. Seed de Producción
+Upsert: SUPERADMIN (stevens@matrix.local / 089858890@Id) + 2 restaurantes demo + usuarios operativos + menú demo
+
+---
+
+## 3. REGLAS DURAS
+
+1. **Multi-tenant estricto** — todo query con `where: { restaurantId }`
+2. **Usuarios operativos SIN email** — solo username+password+role
+3. **Seed idempotente** — upsert, no create
+4. **No modificar POS/KDS/Waiter** — solo agregar nuevas features
+5. **Build local + commit dist/** — Railway no reconstruye TS
+6. **TypeScript estricto** — no `any`
+
+---
+
+## 4. ARCHIVOS
+
+**Backend:** `auth.ts`, `middleware/auth.ts`, `superadmin.ts` (NUEVO), `admin.ts` (NUEVO), `metrics.ts` (NUEVO), `schema.prisma`, `seed.ts`, `index.ts`
+
+**Frontend:** `LoginPage.tsx`, `SuperAdminPage.tsx` (NUEVO), `AdminPage.tsx` (NUEVO), `AuthContext.tsx`, `PrivateRoute.tsx`
+
+**NO tocar:** POS, KDS, Waiter, Delivery, Menú, Órdenes, Landing.
+
+---
+
+## 5. ENTREGABLES
+
+1. Login unificado (email O username)
+2. Panel SUPERADMIN (5 secciones)
+3. Panel ADMIN (usuarios operativos + tickets + métricas)
+4. Endpoint /api/metrics
+5. Seed con 2 restaurantes demo
+6. Redirección por rol
+7. TypeScript compilando + build local exitoso
+
+---
+
+*Prompt generado por Timmy ⚡ — Comanda Fase Producción — 2026-06-04*

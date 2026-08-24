@@ -1,0 +1,156 @@
+# AUDITORÍA DE SEGURIDAD — Comanda
+> Prompt para Claude: análisis de seguridad del código actual y propuesta de hardening.
+> NO implementar nada. Solo diagnosticar y proponer el plan de acción.
+
+---
+
+## 1. CONTEXTO
+
+Comanda es un SaaS multi-restaurante que próximamente tendrá clientes reales con datos sensibles (ventas, clientes, menús, personal). Antes de abrir a producción, necesitamos un análisis de seguridad completo.
+
+**Stack:** Express + Prisma + React 19 + Vite 6 + Railway
+**Repositorio:** `https://github.com/StevCast94/comanda`
+**Dominio:** `comanda.one`
+**Auth:** JWT propio + bcrypt
+
+---
+
+## 2. LO QUE YA SE DETECTÓ (revisar si es suficiente)
+
+### Rate Limiting
+```typescript
+// backend/src/index.ts
+app.use(rateLimit({
+  windowMs: 60 * 1000,
+  max: 300,              // 300 req/min global — ¿suficiente para producción multi-tenant?
+}));
+```
+**Preocupaciones:**
+- 300 req/min es un solo límite global. El login (`/api/auth`) comparte el mismo límite.
+- No hay límite específico para `/api/auth/login` (fuerza bruta).
+- `/api/register` y `/api/leads` son públicos y sin límite estricto.
+- ¿Se necesita rate limit por tenant (restaurantId) además de por IP?
+
+### CORS
+```typescript
+app.use(cors({ origin: true, credentials: true }));
+```
+- `origin: true` permite CUALQUIER origen. En producción debería ser una lista blanca.
+- `comanda.one` y plataformas de delivery (si se integran) deberían ser los únicos orígenes.
+
+### Helmet / Security Headers
+- **NO hay helmet.** Sin headers de seguridad:
+  - Sin `X-Content-Type-Options: nosniff`
+  - Sin `X-Frame-Options: DENY`
+  - Sin `Strict-Transport-Security` (HSTS)
+  - Sin `X-XSS-Protection`
+
+### CSP (Content Security Policy)
+- **NO hay CSP.** Cualquier script puede ejecutarse. Si hay XSS, es game over.
+- Un CSP bien configurado limita: scripts, estilos, imágenes, conexiones a orígenes específicos.
+
+### Vite Build — Source Maps
+```typescript
+// frontend/vite.config.ts — NO tiene sourcemap: false
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+  build: {
+    outDir: "../backend/public/app",
+    emptyOutDir: true,
+    // ⚠️ FALTA: sourcemap: false
+  },
+});
+```
+- **Gravedad:** Cualquiera puede abrir F12 → Sources → ver el código TypeScript ORIGINAL completo.
+- API endpoints, lógica de auth, estructura de la BD, todo expuesto.
+- Las source maps (.js.map) se generan por defecto en producción.
+
+### CSRF
+- La API usa JWT en header `Authorization: Bearer <token>`. Esto protege contra CSRF básico.
+- Pero las rutas públicas (`/api/register`, `/api/leads`) no tienen protección anti-bot.
+
+---
+
+## 3. LO QUE HAY QUE AUDITAR (checklist para Claude)
+
+### A. Backend Security
+1. [ ] **Rate limiting adecuado:**
+   - Login: ¿está separado con límite más estricto (10 req/15min)?
+   - Register: ¿protegido contra creación masiva de restaurantes?
+   - Leads: ¿protegido contra spam?
+   - ¿Rate limit por tenant (restaurantId)?
+
+2. [ ] **Helmet setup:** ¿Qué headers de seguridad faltan? ¿Cuáles agregar para producción?
+
+3. [ ] **CORS:** ¿Reemplazar `origin: true` por whitelist específica?
+
+4. [ ] **CSP:** ¿Qué política CSP recomiendas para este stack (React + Tailwind + Cloudinary + Google Fonts)?
+
+5. [ ] **Input validation:**
+   - ¿Hay sanitización de inputs en todas las rutas?
+   - ¿Se validan tipos y longitudes?
+   - ¿Hay protección contra NoSQL injection en queries Prisma?
+
+6. [ ] **JWT Security:**
+   - ¿Expiración configurada?
+   - ¿Refresh token o solo access token?
+   - ¿El secreto es suficientemente largo y aleatorio?
+   - ¿Se revocan tokens al cambiar contraseña?
+
+7. [ ] **Password policy:**
+   - ¿bcrypt rounds? (mínimo 10, recomendado 12)
+   - ¿Longitud mínima de contraseña?
+   - ¿Protección contra passwords comunes?
+
+8. [ ] **SQL Injection:** Prisma usa consultas parametrizadas por defecto. Verificar que no haya `$queryRaw` o `$executeRaw` sin sanitizar.
+
+9. [ ] **File upload security:** ¿Se validan tipos de archivo? ¿Tamaño máximo? ¿Se escanean?
+
+10. [ ] **Error handling:** ¿Las respuestas de error filtran información sensible (stack traces, versiones)?
+
+### B. Frontend Security
+11. [ ] **Source maps en producción:** `sourcemap: false` en vite.config.ts (CRÍTICO)
+12. [ ] **Sensitive data in localStorage:** El JWT está en localStorage. ¿Es aceptable o debería estar en httpOnly cookie?
+13. [ ] **Environment variables:** ¿Hay keys expuestas en el frontend?
+14. [ ] **Route protection:** ¿PrivateRoute cubre todas las rutas protegidas?
+
+### C. Infraestructura
+15. [ ] **HTTPS:** Railway SSL — ¿forzar redirect HTTP→HTTPS?
+16. [ ] **Database:** ¿DATABASE_URL usa SSL?
+17. [ ] **Backups:** ¿Encriptados? ¿Probados?
+18. [ ] **Logging:** ¿Se registran intentos de login fallidos? ¿Se alerta al SUPERADMIN?
+19. [ ] **2FA:** ¿Para SUPERADMIN o ADMIN en el futuro?
+
+### D. F12 Protection (específico)
+20. [ ] Además de `sourcemap: false`, ¿hay ofuscación/minificación adicional?
+21. [ ] ¿Vite `terserOptions` para ofuscar nombres de variables?
+22. [ ] ¿El código del backend se sirve estáticamente? (NO debería — solo el frontend compilado en `/app/`)
+
+---
+
+## 4. FORMATO DE RESPUESTA ESPERADO
+
+Para cada punto del checklist:
+
+```
+### 🔴 CRÍTICO — Arreglar antes de producción
+### 🟡 IMPORTANTE — Arreglar en esta fase
+### 🟢 RECOMENDADO — Para el roadmap
+### ✅ YA ESTÁ BIEN — No tocar
+```
+
+Incluir:
+- **Diagnóstico:** qué se encontró
+- **Riesgo:** qué podría pasar si no se arregla
+- **Fix propuesto:** código o configuración específica
+- **Prioridad:** 🔴🟡🟢
+
+---
+
+## 5. NO IMPLEMENTAR NADA
+
+Este prompt es SOLO para auditoría y plan de acción. Stevens y Timmy validaremos antes de ejecutar.
+
+---
+
+*Prompt generado por Timmy ⚡ — 2026-06-04*

@@ -1,0 +1,54 @@
+# 📋 CHANGELOG TÉCNICO — Comanda
+> Lo que corregimos desde que Claude generó el primer código.
+> Leer ANTES de empezar esta fase.
+
+---
+
+## 🔥 Correcciones ya aplicadas
+
+### 1. JWT_SECRET sin fallback hardcodeado (c5e197f)
+- **Antes:** `const JWT_SECRET = process.env.JWT_SECRET || "comanda-dev-secret-change-in-prod"`
+- **Ahora:** Arranque aborta si no está definido. Sin fallback.
+
+### 2. IDOR en modificadores corregido (c5e197f)
+- **Antes:** `prisma.modifier.delete({ where: { id } })` sin verificar `restaurantId`
+- **Ahora:** Carga el modifier con su menuItem, verifica `menuItem.restaurantId === req.restaurantId`
+
+### 3. Backups automáticos (48b60c7)
+- GitHub Action: pg_dump diario comprimido → Cloudinary `comanda/backups/`
+- Rotación: 7 diarios + 4 semanales
+
+---
+
+## ⚠️ Lecciones de Matrix Hub V2 (No Repetir)
+
+1. **`import.meta.env` NO funciona** — hardcodear credenciales en frontend
+2. **`prisma db push` en vez de `migrate deploy`** para Railway
+3. **Seed con upsert** — idempotente, se ejecuta en cada deploy
+4. **Railway Nixpacks lento (26 min)** — usar RAILPACK o commitear dist/
+5. **API keys hardcodeadas en backend** — no depender de env vars de Railway
+6. **NO duplicar servicios** — Railway cubre hosting + dominio + SSL
+
+---
+
+## 🔴 Pendientes de producción (NO ignorar)
+
+1. **Rate limiting en login** — 10 intentos/15min por IP (no existe aún)
+2. **Captcha en registro público** — `/api/register` y `/api/leads` sin protección anti-bot
+3. **Probar restauración de backup** — nunca se ha probado
+4. **Endpoint /api/metrics** — no existe aún (se crea en esta fase)
+
+---
+
+## 📐 Stack Confirmado
+
+| Capa | Tecnología |
+|------|-----------|
+| Frontend | React 19 + Vite 6 + Tailwind v4 + TypeScript |
+| Backend | Express + Prisma + TypeScript (tsx) |
+| BD | Railway PostgreSQL |
+| Auth | JWT propio (bcrypt + jsonwebtoken) |
+| Hosting | Railway Pro ($20/mes) |
+| Dominio | comanda.one (ya configurado) |
+| Build | NIXPACKS con buildCommand: `cd backend && npm install && npx prisma generate && npx tsc` |
+| Start | `cd backend && npx prisma migrate deploy && npx tsx scripts/bootstrap.ts && node dist/src/index.js` |

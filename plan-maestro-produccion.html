@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>PLAN MAESTRO — Comanda (Producción)</title>
+<style>
+  @page { margin: 16mm; size: A4; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a1a; font-size: 10pt; line-height: 1.55; }
+  h1 { color: #dc2626; border-bottom: 3px solid #dc2626; padding-bottom: 8px; font-size: 16pt; }
+  h2 { color: #b91c1c; margin-top: 22px; font-size: 12pt; }
+  h3 { color: #333; font-size: 10.5pt; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 9pt; }
+  th { background: #0f172a; color: #f87171; padding: 7px 9px; text-align: left; }
+  td { padding: 6px 9px; border: 1px solid #ddd; }
+  tr:nth-child(even) { background: #fef2f2; }
+  .box { padding: 10px 14px; margin: 12px 0; }
+  .critical { background: #fef2f2; border-left: 4px solid #dc2626; }
+  .blue { background: #f0f9ff; border-left: 4px solid #0ea5e9; }
+  .gold { background: #fefce8; border-left: 4px solid #eab308; }
+  .green { background: #f0fdf4; border-left: 4px solid #16a34a; }
+  .code { background: #1e1e1e; color: #d4d4d4; padding: 10px 14px; font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 8.5pt; border-radius: 4px; white-space: pre-wrap; }
+  .header-meta { color: #6b7280; font-size: 8pt; margin-bottom: 16px; }
+  ul, ol { margin: 4px 0; padding-left: 18px; }
+  li { margin: 2px 0; }
+</style>
+</head>
+<body>
+
+<h1>🍽️ COMANDA — Plan Maestro de Producción</h1>
+<p class="header-meta">
+<strong>Fecha:</strong> 4 junio 2026 | <strong>Dominio:</strong> comanda.one | <strong>Hosting:</strong> Railway Pro ($20/mes)<br>
+<strong>Metodología:</strong> Timmy planifica → Claude ejecuta → Timmy revisa → Deploy local → Push en horario bajo tráfico
+</p>
+
+<!-- VISIÓN -->
+<h2>🎯 Visión</h2>
+<div class="blue box">
+  Comanda es un SaaS multi-restaurante: POS, KDS Cocina, y Panel de Meseros.
+  Cada restaurante tiene su ADMIN con correo+contraseña. El ADMIN crea usuarios operativos (COCINA, CAJA, MESERO) con solo usuario+contraseña, sin email.
+  El SUPERADMIN (Stevens) gestiona suscripciones, puede crear/editar/eliminar restaurantes, y recibe tickets de soporte.
+  Escala: comenzar con 2 restaurantes reales, diseñado para decenas.
+</div>
+
+<!-- ROLES -->
+<h2>👥 Roles y Permisos</h2>
+
+<table>
+<tr><th>Rol</th><th>Quién lo crea</th><th>Login</th><th>Permisos</th></tr>
+<tr><td><strong>SUPERADMIN</strong></td><td>Seed (Stevens)</td><td>email + password</td><td>CRUD restaurantes, ver todas métricas, suscripciones, tickets de soporte, eliminar datos</td></tr>
+<tr><td><strong>ADMIN</strong> (restaurante)</td><td>Auto-registro o SUPERADMIN</td><td>email + password</td><td>Panel de admin de su restaurante: crear usuarios, menú, precios, ver métricas, reportes, tickets de soporte</td></tr>
+<tr><td><strong>CASHIER</strong> (caja)</td><td>ADMIN del restaurante</td><td>username + password</td><td>POS: tomar pedidos, cobrar, ver menú</td></tr>
+<tr><td><strong>COOK_1</strong> (cocina acompañantes)</td><td>ADMIN del restaurante</td><td>username + password</td><td>KDS: ver tickets, marcar items listos. Filtrado: solo ítems sin kitchen=BAR o según asignación</td></tr>
+<tr><td><strong>COOK_2</strong> (cocina proteína)</td><td>ADMIN del restaurante</td><td>username + password</td><td>KDS: ver tickets, marcar items listos</td></tr>
+<tr><td><strong>WAITER</strong> (mesero)</td><td>ADMIN del restaurante</td><td>username + password</td><td>Panel Mesero: ver tickets listos, juntar y entregar a mesa</td></tr>
+<tr><td><strong>DELIVERY</strong> (motorista)</td><td>ADMIN del restaurante</td><td>username + password</td><td>Ver entregas asignadas, marcar como entregado</td></tr>
+</table>
+
+<!-- LOGIN FLOW -->
+<h2>🔐 Flujo de Login</h2>
+
+<div class="code">POST /api/auth/login  { email, password }
+  → El backend busca por email
+  → Si encuentra: verifica password con bcrypt
+  → Si no encuentra: busca por username (para usuarios operativos sin email)
+  → Si role = SUPERADMIN o ADMIN → JWT con restaurantId, role, userId
+  → Si role = CASHIER|COOK_1|COOK_2|WAITER|DELIVERY → JWT con todo lo anterior
+  → Frontend: redirige según role a la pantalla correspondiente
+    - ADMIN → /admin/dashboard
+    - CASHIER → /pos
+    - COOK_1, COOK_2 → /kitchen
+    - WAITER → /waiter
+    - DELIVERY → /delivery
+    - SUPERADMIN → /superadmin/dashboard</div>
+
+<!-- SUPERADMIN -->
+<h2>🛡️ SUPERADMIN Dashboard</h2>
+<p>Panel exclusivo de Stevens. Ruta: <code>/superadmin</code></p>
+
+<h3>Secciones:</h3>
+<ol>
+  <li><strong>🏢 Restaurantes:</strong> Tabla con todos los restaurantes. Crear, editar, suspender (active=false), eliminar. Ver métricas por restaurante.</li>
+  <li><strong>💳 Suscripciones:</strong> Estado de suscripción de cada restaurante (TRIAL, ACTIVE, PAST_DUE, CANCELLED). Activar/desactivar.</li>
+  <li><strong>🎫 Tickets de Soporte:</strong> Los ADMIN de cada restaurante pueden enviar tickets. El SUPERADMIN los ve, contesta, cierra.</li>
+  <li><strong>📊 Métricas Globales:</strong> Total restaurantes activos, total usuarios, pedidos del día, revenue total.</li>
+  <li><strong>📋 Auditoría:</strong> Log de acciones críticas (creación/eliminación de restaurantes, cambios de suscripción).</li>
+</ol>
+
+<!-- MULTI-TENANT -->
+<h2>🏢 Aislamiento Multi-Tenant</h2>
+<div class="critical box">
+  <strong>🔴 REGLA DURA:</strong> Todo query Prisma DEBE filtrar por <code>restaurantId</code>. El middleware extrae <code>restaurantId</code> del JWT y lo inyecta en <code>req.restaurantId</code>. NUNCA hacer queries sin este filtro para datos de restaurante.
+</div>
+
+<p>Patrón en cada ruta:</p>
+<div class="code">// Middleware inyecta req.restaurantId automáticamente
+const items = await prisma.menuItem.findMany({
+  where: { restaurantId: req.restaurantId, deletedAt: null }
+})</div>
+
+<!-- BACKUP & SECURITY -->
+<h2>🔒 Backups y Seguridad</h2>
+
+<table>
+<tr><th>Preocupación</th><th>Solución</th><th>Estado</th></tr>
+<tr><td>Backups BD</td><td>GitHub Action: pg_dump diario → Cloudinary `comanda/backups/`</td><td>✅ Commit 48b60c7</td></tr>
+<tr><td>JWT_SECRET</td><td>Generado aleatoriamente en Railway, sin fallback hardcodeado</td><td>✅ Commit c5e197f</td></tr>
+<tr><td>bcrypt passwords</td><td>10 rounds mínimo</td><td>✅ En código</td></tr>
+<tr><td>Rate limiting</td><td>Global 300 req/min + 10 intentos/15min en login</td><td>🟡 Pendiente verificar</td></tr>
+<tr><td>IDOR multi-tenant</td><td>Todo query filtrado por restaurantId</td><td>✅ Corregido c5e197f</td></tr>
+<tr><td>HTTPS</td><td>Railway SSL automático</td><td>✅</td></tr>
+<tr><td>Probar restauración</td><td>Al menos 1 vez/mes, restaurar backup en entorno local</td><td>🔴 Pendiente</td></tr>
+</table>
+
+<!-- METRICS -->
+<h2>📊 Endpoint /api/metrics para Matrix</h2>
+<div class="code">GET /api/metrics  (público, sin auth)
+
+{
+  "restaurants_total": N,
+  "restaurants_active": N,
+  "users_total": N,
+  "orders_today": N,
+  "revenue_today": "$N.NN",
+  "revenue_month": "$N.NN",
+  "subscriptions_trial": N,
+  "subscriptions_active": N,
+  "support_tickets_open": N,
+  "updated_at": "ISO timestamp"
+}</div>
+
+<!-- DEPLOY -->
+<h2>🚀 Protocolo de Deploy</h2>
+<div class="gold box">
+  <strong>🟡 Desarrollo:</strong> Todo cambio se prueba en local primero. Solo se deploya cuando está verificado.<br>
+  <strong>🟡 Horario:</strong> Deploys solo en horario de tráfico mínimo (madrugada GMT-5 o domingo).<br>
+  <strong>🟡 Rollback:</strong> Siempre tener el commit anterior identificado para revertir con <code>git revert</code> y push inmediato.<br>
+  <strong>🟡 Commit messages:</strong> Descriptivos con prefijo (feat:, fix:, chore:, security:).
+</div>
+
+<!-- MATRIX -->
+<h2>🧠 Integración con Matrix</h2>
+<ul>
+  <li>El SUPERADMIN ve Comanda como un proyecto más en Matrix Dashboard</li>
+  <li>Las métricas se sincronizan vía Railway Cron Job cada 6h desde <code>comanda.one/api/metrics</code></li>
+  <li>Los eventos críticos (nuevo restaurante, ticket de soporte, pago) se registran como TimelineEvent</li>
+  <li>Cosmo y Wanda pueden consultar métricas de Comanda igual que cualquier otro proyecto</li>
+  <li>Todos los procesos y protocolos documentados en Matrix → Timeline + Tasks</li>
+</ul>
+
+<!-- PROCESOS -->
+<h2>📋 Procesos Documentados en Matrix</h2>
+<ol>
+  <li><strong>Onboarding nuevo restaurante:</strong> SUPERADMIN crea restaurante → asigna plan → entrega credenciales ADMIN</li>
+  <li><strong>Soporte:</strong> ADMIN crea ticket → SUPERADMIN responde → cierre</li>
+  <li><strong>Actualización del sistema:</strong> Desarrollar en local → test → commit → deploy en horario bajo → verificar</li>
+  <li><strong>Backup y restauración:</strong> Automático diario. Restauración manual probada mensualmente.</li>
+  <li><strong>Escalamiento de incidentes:</strong> Si producción cae, rollback inmediato, diagnóstico, fix, redeploy.</li>
+  <li><strong>Mantenimiento programado:</strong> Aviso a restaurantes con 48h de anticipación.</li>
+</ol>
+
+<!-- LECCIONES -->
+<h2>⚠️ Lecciones de Otros Proyectos (No Repetir)</h2>
+<div class="critical box">
+<ol>
+  <li><strong>NO usar import.meta.env en frontend:</strong> Hardcodear credenciales. Build local → commit dist.</li>
+  <li><strong>prisma db push > migrate deploy</strong> para Railway.</li>
+  <li><strong>Seed con upsert:</strong> Idempotente, se ejecuta en cada deploy.</li>
+  <li><strong>API keys hardcodeadas</strong> en backend si Railway no las expone bien.</li>
+  <li><strong>Railway Nixpacks lento:</strong> Usar RAILPACK o commitear dist/ precompilado + npm install mínimo.</li>
+  <li><strong>No duplicar servicios:</strong> Railway ya cubre hosting + dominio + SSL. No agregar Vercel/Netlify.</li>
+</ol>
+</div>
+
+</body>
+</html>
