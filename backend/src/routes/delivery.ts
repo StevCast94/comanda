@@ -185,13 +185,12 @@ delRouter.patch("/:id/advance", delAuthz("DELIVERY", "ADMIN"), async (req: DelRe
     }
 
     const updated = await delPrisma.$transaction(async (tx) => {
-      const d = await tx.deliveryOrder.update({
+      await tx.deliveryOrder.update({
         where: { id: delivery.id },
         data: {
           status: next,
           ...(next === "DELIVERED" ? { actualDeliveryTime: new Date() } : {}),
         },
-        include: deliveryInclude,
       });
       if (next === "DELIVERED") {
         await tx.order.update({
@@ -199,7 +198,12 @@ delRouter.patch("/:id/advance", delAuthz("DELIVERY", "ADMIN"), async (req: DelRe
           data: { status: "DELIVERED", deliveredAt: new Date() },
         });
       }
-      return d;
+      // Re-fetch después de ambas escrituras para que el `order` anidado
+      // refleje el estado final, no el estado previo a esta transacción.
+      return tx.deliveryOrder.findUniqueOrThrow({
+        where: { id: delivery.id },
+        include: deliveryInclude,
+      });
     });
 
     res.json({ delivery: updated });
